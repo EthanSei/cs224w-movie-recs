@@ -1,0 +1,7 @@
+[project]
+name = "proj"
+version = "0.1.0"
+dependencies = ["torch", "torch-geometric", "pandas", "numpy", "requests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
