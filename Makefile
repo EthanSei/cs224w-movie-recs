@@ -12,7 +12,7 @@ force_load:
 	python scripts/load_data.py --env $(env) --force
 
 train:
-	pythong scripts/train.py
+	python scripts/train.py
 
 test:
 	pytest

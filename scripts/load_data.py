@@ -1,4 +1,4 @@
-from recommender.data import MovielensDataLoader
+from recommender.data.movielens import MovielensDataLoader
 
 import argparse
 import torch

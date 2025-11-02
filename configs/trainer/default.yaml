@@ -1,0 +1,4 @@
+name: default
+module: recommender.training.simple_trainer:SimpleTrainer
+params:
+  num_epochs: 20
