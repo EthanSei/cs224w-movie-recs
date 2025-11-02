@@ -1,0 +1,6 @@
+name: movielens
+module: recommender.data.movielens:MovielensDataLoader
+params:
+  env: dev
+options:
+  force: false

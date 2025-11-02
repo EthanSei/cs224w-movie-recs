@@ -1,0 +1,9 @@
+defaults:
+ - data: movielens
+ - model: two_tower
+ - trainer: default
+hydra:
+  run:
+    dir: runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: False
