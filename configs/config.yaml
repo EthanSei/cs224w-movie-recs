@@ -1,4 +1,5 @@
 defaults:
+ - _self_
  - data: movielens
  - model: two_tower
  - trainer: default

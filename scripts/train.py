@@ -6,7 +6,7 @@ from recommender.utils.module_loader import load_module
 def main(cfg: DictConfig):
     DataLoaderClass = load_module(cfg.data.module)
     data_loader = DataLoaderClass(**cfg.data.params)
-    data = data_loader.get_data(cfg.data.options.force)
+    train_data, val_data, test_data = data_loader.get_train_val_test_data(cfg.data.options.force)
     print("Loaded data")
 
     ModelClass = load_module(cfg.model.module)
@@ -18,9 +18,8 @@ def main(cfg: DictConfig):
     print("Loaded trainer")
 
     print("Training model...")
-    trainer.fit(model, data)
+    trainer.fit(model, train_data, val_data)
     print("Training completed")
-
 
 if __name__ == "__main__":
     main()
