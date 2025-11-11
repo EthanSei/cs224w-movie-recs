@@ -1,4 +1,4 @@
-name: CI
+name: build
 
 on:
   pull_request:
@@ -13,11 +13,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: [ "3.12" ]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -38,4 +38,5 @@ jobs:
       with:
         name: coverage-report
         path: coverage.xml
+        overwrite: true
         if-no-files-found: ignore
