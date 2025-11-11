@@ -1,0 +1,5 @@
+name: bpr
+module: recommender.losses.bpr:BPRLoss
+params:
+  weight: 1.0
+  reduction: mean
