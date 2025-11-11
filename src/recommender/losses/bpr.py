@@ -1,25 +1,21 @@
 import torch
 import torch.nn.functional as F
 
-class BPRLoss:
-    def __init__(self, weight: float = 1.0, reduction: str = "mean"):
-        self.weight = weight
+class BPRLoss(torch.nn.Module):
+    def __init__(self, reduction: str = "mean"):
+        super(BPRLoss, self).__init__()
+        if reduction not in ["mean", "sum"]:
+            raise ValueError(f"Invalid reduction: {reduction}")
         self.reduction = reduction
 
-    def loss_fn(self, outputs: dict, batch):
-        pos = outputs["pos_score"]
-        neg = outputs["neg_score"]
-
-        if neg.dim() == 2:
-            loss = -F.logsigmoid((pos.unsqueeze(1) - neg)).mean(dim=1)
-        else:
-            loss = -F.logsigmoid(pos - neg)
-
+    def forward(self, 
+        pos_scores: torch.Tensor, # shape: (batch_size,)
+        neg_scores: torch.Tensor # shape: (batch_size,)
+    ):
+        # numerically stable version of -logsigmoid(pos_scores - neg_scores)
+        loss = F.softplus(neg_scores - pos_scores)
         if self.reduction == "mean":
-            loss = loss.mean()
+            loss_val = loss.mean()
         elif self.reduction == "sum":
-            loss = loss.sum()
-        else:
-            raise ValueError(f"Invalid reduction: {self.reduction}")
-
-        return loss * self.weight
+            loss_val = loss.sum()
+        return loss_val
