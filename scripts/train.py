@@ -13,12 +13,16 @@ def main(cfg: DictConfig):
     model = ModelClass(**cfg.model.params)
     print("Loaded model")
 
+    LossClass = load_module(cfg.loss.module)
+    loss_fn = LossClass(**cfg.loss.params)
+    print("Loaded loss function:", cfg.loss.name)
+
     TrainerClass = load_module(cfg.trainer.module)
     trainer = TrainerClass(**cfg.trainer.params)
     print("Loaded trainer")
 
     print("Training model...")
-    trainer.fit(model, train_data, val_data)
+    trainer.fit(model, train_data, val_data, loss_fn=loss_fn)
     print("Training completed")
 
 if __name__ == "__main__":
