@@ -3,6 +3,7 @@
 env ?= dev
 
 setup:
+	pip install --upgrade pip
 	pip install -e .[dev]
 
 load:
@@ -14,5 +15,9 @@ force_load:
 train:
 	python scripts/train.py
 
+setup_test:
+	pip install --upgrade pip
+	pip install -e .[test]
+
 test:
-	pytest
+	pytest tests -q --disable-warnings --maxfail=1 --cov=src/recommender

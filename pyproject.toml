@@ -11,5 +11,11 @@ dependencies = [
     "omegaconf>=2.3",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest >=8",
+    "pytest-cov>=5"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
