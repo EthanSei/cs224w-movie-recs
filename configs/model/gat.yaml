@@ -1,0 +1,12 @@
+# GAT Model Configuration
+# Graph Attention Network for user-movie recommendation
+
+module: "recommender.models.gat:GAT"
+params:
+  user_dim: 64      # Will be overridden if data has features
+  item_dim: 64      # Will be overridden if data has features
+  hidden_dim: 128   # Hidden embedding dimension
+  num_heads: 2      # Number of attention heads
+  num_layers: 2     # Number of GAT layers
+  dropout: 0.1      # Dropout rate for attention weights
+
