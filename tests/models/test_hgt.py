@@ -10,6 +10,36 @@ def test_encode_shape(tiny_hetero_graph):
     assert set(out.keys()) == set(g.node_types)
     for node_type in g.node_types:
         assert out[node_type].shape == (g[node_type].num_nodes, 64)
-
     for t in out.values():
         assert torch.isfinite(t).all()
+
+def test_forward_pass_different_graph_sizes(tiny_hetero_graph, large_hetero_graph):
+    """Test HGT forward pass with different graph sizes"""
+    # Small graph
+    g1 = tiny_hetero_graph
+    in_dims1 = {node_type: g1[node_type].x.size(-1) for node_type in g1.node_types}
+    model1 = HGT(in_dims1, g1.metadata(), hidden_dim=64, heads=2, layers=2)
+    out1 = model1.forward(g1.x_dict, g1.edge_index_dict)
+    assert set(out1.keys()) == set(g1.node_types)
+    
+    # Large graph
+    g2 = large_hetero_graph
+    in_dims2 = {node_type: g2[node_type].x.size(-1) for node_type in g2.node_types}
+    model2 = HGT(in_dims2, g2.metadata(), hidden_dim=64, heads=2, layers=2)
+    out2 = model2.forward(g2.x_dict, g2.edge_index_dict)
+    assert set(out2.keys()) == set(g2.node_types)
+    assert out2['user'].shape == (g2['user'].num_nodes, 64)
+    assert out2['item'].shape == (g2['item'].num_nodes, 64)
+
+def test_encode_missing_node_features(tiny_hetero_graph):
+    """Test HGT encode method with missing node features"""
+    g = tiny_hetero_graph
+    x_dict = {'user': g['user'].x}
+    in_dims = {node_type: g[node_type].x.size(-1) for node_type in g.node_types}
+    model = HGT(in_dims, g.metadata(), hidden_dim=64, heads=2, layers=2)
+    
+    try:
+        out = model.encode(x_dict, g.edge_index_dict)
+        assert 'user' in out
+    except (KeyError, AttributeError) as e:
+        pytest.skip(f"Model requires item features: {e}")

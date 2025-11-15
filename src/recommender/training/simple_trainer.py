@@ -1,11 +1,28 @@
 import copy
+import logging
 import tqdm
 import torch
 import torch_geometric.data as HeteroData
 
+# Setup logging
+logger = logging.getLogger(__name__)
+
 class SimpleTrainer:
-    def __init__(self, num_epochs: int):
+    """
+    Generic trainer for recommendation models.
+    
+    All models must implement encode(x_dict, edge_index_dict) -> dict[str, Tensor]
+    that returns embeddings with 'user' and 'item' keys.
+    """
+    def __init__(
+        self, 
+        num_epochs: int,
+        learning_rate: float = 1e-3,
+        device: str = "cpu",
+    ):
         self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.device = torch.device(device)
 
     def fit(
         self,
@@ -14,70 +31,100 @@ class SimpleTrainer:
         val_data: HeteroData,
         optimizer: torch.optim.Optimizer = None,
         loss_fn: torch.nn.Module = None,
-        device: torch.device = torch.device("cpu"),
         verbose: bool = True,
-    ) -> None:
+    ) -> torch.nn.Module:
+        """
+        Train the model on the provided data.
+        
+        All models must implement encode(x_dict, edge_index_dict) -> dict[str, Tensor].
+        """
+        device = self.device
         model.to(device)
 
         if optimizer is None:
-            optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate)
         if loss_fn is None:
-            loss_fn = torch.nn.BCEWithLogitsLoss()
+            from recommender.losses.bpr import BPRLoss
+            loss_fn = BPRLoss(reduction="mean")
+            logger.info("Using BPR loss with mean reduction (default for recommendation models)")
 
-        edge_store = train_data[("user", "rates", "movie")]
-        user_store = train_data["user"]
-        movie_store = train_data["movie"]
+        # Prepare graph data - expect features to exist in data.x
+        train_x_dict = {node_type: train_data[node_type].x.to(device) for node_type in train_data.node_types}
+        train_edge_index_dict = {edge_type: train_data[edge_type].edge_index.to(device) for edge_type in train_data.edge_types}
+        
+        val_x_dict = {node_type: val_data[node_type].x.to(device) for node_type in val_data.node_types}
+        val_edge_index_dict = {edge_type: val_data[edge_type].edge_index.to(device) for edge_type in val_data.edge_types}
 
-        user_features = self._resolve_features(
-            user_store,
-            getattr(getattr(model, "user_tower", [None])[0], "in_features", None),
-            device,
-        )
-        movie_features = self._resolve_features(
-            movie_store,
-            getattr(getattr(model, "item_tower", [None])[0], "in_features", None),
-            device,
-        )
-
-        edge_label_index = edge_store.edge_label_index.to(device)
-        edge_label = edge_store.edge_label.float().to(device)
+        # Training loop
+        train_losses = []
         best_loss = float("inf")
-        best_model = None
+        best_model_state = None
 
         for epoch in tqdm.tqdm(range(self.num_epochs), disable=not verbose):
             model.train()
             optimizer.zero_grad(set_to_none=True)
 
-            user_embeddings, item_embeddings = model(user_features, movie_features)
+            # Get embeddings using unified interface
+            z_dict = model.encode(train_x_dict, train_edge_index_dict)
+            user_emb = z_dict.get("user")
+            item_emb = z_dict.get("item")
+            
+            if user_emb is None or item_emb is None:
+                raise ValueError("Model must output 'user' and 'item' embeddings")
 
-            logits = (user_embeddings[edge_label_index[0]] * item_embeddings[edge_label_index[1]]).sum(dim=-1)
-            loss = loss_fn(logits, edge_label)
+            # Compute loss with BPR (requires negative sampling)
+            loss = self._compute_bpr_loss(
+                user_emb, item_emb, train_data[("user", "rates", "item")].edge_label_index, 
+                loss_fn, device
+            )
+
             loss.backward()
             optimizer.step()
+            train_losses.append(loss.item())
 
-            if loss.item() < best_loss:
-                best_loss = loss.item()
-                best_model = copy.deepcopy(model)
+            if verbose and (epoch + 1) % 10 == 0:
+                logger.info(f"Epoch {epoch+1}/{self.num_epochs}, Train loss: {loss.item():.4f}")
 
+            # Validation
             model.eval()
             with torch.no_grad():
-                # TODO: Evaluate the model
-                pass
+                val_z_dict = model.encode(val_x_dict, val_edge_index_dict)
+                val_user_emb = val_z_dict.get("user")
+                val_item_emb = val_z_dict.get("item")
+                
+                val_loss = self._compute_bpr_loss(
+                    val_user_emb, val_item_emb, val_data[("user", "rates", "item")].edge_label_index,
+                    loss_fn, device
+                ).item()
+                
+                if val_loss < best_loss:
+                    best_loss = val_loss
+                    best_model_state = copy.deepcopy(model.state_dict())
+
+        # Load best model
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state)
 
         if verbose:
-            print(f"Best loss: {best_loss}")
-        return best_model
+            logger.info(f"Training completed. Best validation loss: {best_loss:.4f}")
+        
+        return model
 
-    def _resolve_features(
-        self, store: HeteroData, in_dim: int, device: torch.device
+    def _compute_bpr_loss(
+        self,
+        user_emb: torch.Tensor,
+        item_emb: torch.Tensor,
+        edge_label_index: torch.Tensor,
+        loss_fn: torch.nn.Module,
+        device: torch.device,
     ) -> torch.Tensor:
-        features = getattr(store, "x", None)
-        if features is None:
-            if in_dim is None:
-                raise ValueError(
-                    "Cannot infer feature dimension for nodes without attributes."
-                )
-            with torch.no_grad():
-                features = torch.randn(store.num_nodes, in_dim)
-            store.x = features
-        return features.to(device)
+        """Compute BPR loss with negative sampling."""
+        edge_label_index = edge_label_index.to(device)
+        pos_scores = (user_emb[edge_label_index[0]] * item_emb[edge_label_index[1]]).sum(dim=-1)
+        
+        # Sample negative items
+        num_negatives = edge_label_index.size(1)
+        neg_items = torch.randint(0, item_emb.size(0), (num_negatives,), device=device)
+        neg_scores = (user_emb[edge_label_index[0]] * item_emb[neg_items]).sum(dim=-1)
+        
+        return loss_fn(pos_scores, neg_scores)

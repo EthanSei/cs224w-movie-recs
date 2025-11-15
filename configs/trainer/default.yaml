@@ -1,4 +1,6 @@
 name: default
 module: recommender.training.simple_trainer:SimpleTrainer
 params:
-  num_epochs: 20
+  num_epochs: 100
+  learning_rate: 0.001
+  device: cpu
