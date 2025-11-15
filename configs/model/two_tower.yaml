@@ -1,6 +1,8 @@
+name: two_tower
 module: recommender.models.two_tower:TwoTower
 params:
   user_dim: 100
   item_dim: 100
   hidden_dim: 128
+  num_layers: 3
   dropout: 0.1

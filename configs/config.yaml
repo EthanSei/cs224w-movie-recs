@@ -2,6 +2,7 @@ defaults:
  - _self_
  - data: movielens
  - model: two_tower
+ - loss: bpr
  - trainer: default
 hydra:
   run:

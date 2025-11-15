@@ -23,11 +23,23 @@ class MovielensDataLoader:
         transform = RandomLinkSplit(
             num_val=0.1,
             num_test=0.1,
-            edge_types=[("user", "rates", "movie")],
-            rev_edge_types=[("movie", "rev_rates", "user")],
+            edge_types=[("user", "rates", "item")],
+            rev_edge_types=[("item", "rev_rates", "user")],
         )
         train_data, val_data, test_data = transform(data)
         return train_data, val_data, test_data
+
+    def _build_user_features(self, users: np.ndarray, feature_dim: int = 100) -> torch.Tensor:
+        num_users = len(users)
+        # TODO: Replace with features derived from user data
+        features = torch.randn(num_users, feature_dim)
+        return features
+
+    def _build_item_features(self, items: pd.DataFrame, feature_dim: int = 100) -> torch.Tensor:
+        num_items = len(items)
+        # TODO: Replace with features derived from item data
+        features = torch.randn(num_items, feature_dim)
+        return features
 
     def _build_movielens_graph(self, movies: pd.DataFrame, ratings: pd.DataFrame):
         movie_index = pd.Index(movies["movieId"].drop_duplicates().to_numpy())
@@ -49,10 +61,15 @@ class MovielensDataLoader:
         )
 
         data = HeteroData()
-        data["user"].num_nodes = len(users)
-        data["movie"].num_nodes = len(movie_index)
+        
+        # Build node features using helper functions
+        # Note: movie_index contains unique items that appear in ratings
+        # We filter movies DataFrame to match movie_index for consistency
+        items_filtered = movies[movies["movieId"].isin(movie_index)]
+        data["user"].x = self._build_user_features(users)
+        data["item"].x = self._build_item_features(items_filtered)
 
-        edge_store = data[("user", "rates", "movie")]
+        edge_store = data[("user", "rates", "item")]
         edge_store.edge_index = edge_index
         edge_store.rating = rating
         edge_store.timestamp = timestamp
