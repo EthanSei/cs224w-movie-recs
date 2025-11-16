@@ -1,6 +1,7 @@
 import hydra
 import logging
 import numpy as np
+import os
 import random
 import torch
 from omegaconf import DictConfig, OmegaConf
@@ -14,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_path="../configs", config_name="config")
-def main(cfg: DictConfig):
+def run_training(cfg: DictConfig):
     # Set seed for reproducibility
     seed = cfg.get('seed', 42)
     _set_seed(seed)
@@ -42,8 +43,12 @@ def main(cfg: DictConfig):
 
     # Train
     trained_model = trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=True)
-    torch.save(trained_model.state_dict(), f"runs/{cfg.data.name}/{cfg.model.name}/{cfg.loss.name}/{cfg.trainer.name}.pth")
-    logger.info(f"Saved model to runs/{cfg.data.name}/{cfg.model.name}/{cfg.loss.name}/{cfg.trainer.name}.pth")
+    
+    # Create directory structure and save model
+    save_path = f"runs/{cfg.data.name}/{cfg.model.name}/{cfg.loss.name}/{cfg.trainer.name}.pth"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    torch.save(trained_model.state_dict(), save_path)
+    logger.info(f"Saved model to {save_path}")
 
 def _set_seed(seed: int = 42):
     """Set random seeds for reproducibility."""
@@ -89,4 +94,4 @@ def _construct_model_params(cfg_model: DictConfig, train_data: HeteroData) -> di
     return model_params
 
 if __name__ == "__main__":
-    main()
+    run_training()
