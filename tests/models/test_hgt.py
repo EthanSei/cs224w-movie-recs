@@ -43,3 +43,30 @@ def test_encode_missing_node_features(tiny_hetero_graph):
         assert 'user' in out
     except (KeyError, AttributeError) as e:
         pytest.skip(f"Model requires item features: {e}")
+
+def test_hgt_score_method(tiny_hetero_graph):
+    """Test HGT score() method uses WeightedDotProductHead"""
+    g = tiny_hetero_graph
+    in_dims = {node_type: g[node_type].x.size(-1) for node_type in g.node_types}
+    model = HGT(in_dims, g.metadata(), hidden_dim=64, heads=2, layers=2)
+    model.eval()
+    
+    # Get embeddings
+    z_dict = model.encode(g.x_dict, g.edge_index_dict)
+    user_emb = z_dict["user"]
+    item_emb = z_dict["item"]
+    
+    # Test score() with batched user-item pairs
+    batch_size = 5
+    user_indices = torch.randint(0, user_emb.size(0), (batch_size,))
+    item_indices = torch.randint(0, item_emb.size(0), (batch_size,))
+    user_batch = user_emb[user_indices]
+    item_batch = item_emb[item_indices]
+    
+    scores = model.score(user_batch, item_batch)
+    assert scores.shape == (batch_size,)
+    assert torch.isfinite(scores).all()
+    
+    # Verify it's using weighted dot product (not just dot product)
+    simple_dot = (user_batch * item_batch).sum(dim=1)
+    assert not torch.allclose(scores, simple_dot, atol=1e-4)

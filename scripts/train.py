@@ -85,12 +85,6 @@ def _construct_model_params(cfg_model: DictConfig, train_data: HeteroData) -> di
     if 'metadata' in model_params:
         model_params['metadata'] = metadata
     
-    # Update user_dim and item_dim for models that need it (e.g., TwoTower)
-    if 'user_dim' in model_params:
-        model_params['user_dim'] = in_dims.get('user')
-    if 'item_dim' in model_params:
-        model_params['item_dim'] = in_dims.get('item')
-    
     return model_params
 
 if __name__ == "__main__":

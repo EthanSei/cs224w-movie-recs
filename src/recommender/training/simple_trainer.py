@@ -75,7 +75,7 @@ class SimpleTrainer:
             # Compute loss with BPR (requires negative sampling)
             loss = self._compute_bpr_loss(
                 user_emb, item_emb, train_data[("user", "rates", "item")].edge_label_index, 
-                loss_fn, device
+                loss_fn, device, model
             )
 
             loss.backward()
@@ -94,7 +94,7 @@ class SimpleTrainer:
                 
                 val_loss = self._compute_bpr_loss(
                     val_user_emb, val_item_emb, val_data[("user", "rates", "item")].edge_label_index,
-                    loss_fn, device
+                    loss_fn, device, model
                 ).item()
                 
                 if val_loss < best_loss:
@@ -117,14 +117,19 @@ class SimpleTrainer:
         edge_label_index: torch.Tensor,
         loss_fn: torch.nn.Module,
         device: torch.device,
+        model: torch.nn.Module,
     ) -> torch.Tensor:
-        """Compute BPR loss with negative sampling."""
+        """Compute BPR loss with negative sampling using model's score() method."""
         edge_label_index = edge_label_index.to(device)
-        pos_scores = (user_emb[edge_label_index[0]] * item_emb[edge_label_index[1]]).sum(dim=-1)
+        pos_user_emb = user_emb[edge_label_index[0]]
+        pos_item_emb = item_emb[edge_label_index[1]]
+        pos_scores = model.score(pos_user_emb, pos_item_emb)
         
         # Sample negative items
         num_negatives = edge_label_index.size(1)
         neg_items = torch.randint(0, item_emb.size(0), (num_negatives,), device=device)
-        neg_scores = (user_emb[edge_label_index[0]] * item_emb[neg_items]).sum(dim=-1)
+        neg_user_emb = user_emb[edge_label_index[0]]
+        neg_item_emb = item_emb[neg_items]
+        neg_scores = model.score(neg_user_emb, neg_item_emb)
         
         return loss_fn(pos_scores, neg_scores)

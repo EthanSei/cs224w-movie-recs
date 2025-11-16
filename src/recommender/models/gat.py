@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv, HeteroConv
-from recommender.models.layers import TypeProjector
+from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
 
 
 class GAT(nn.Module):
@@ -37,26 +37,34 @@ class GAT(nn.Module):
     ):
         super(GAT, self).__init__()
         
+        # Ensure hidden_dim is divisible by num_heads for fair comparison with HGT
+        if hidden_dim % num_heads != 0:
+            raise ValueError(f"hidden_dim ({hidden_dim}) must be divisible by num_heads ({num_heads})")
+        
         self.num_layers = num_layers
         self.num_heads = num_heads
         self.dropout = dropout
         self.hidden_dim = hidden_dim
         self.metadata = metadata
         
+        # Dimension per head (normalized so final output = hidden_dim, not hidden_dim * num_heads)
+        hidden_dim_per_head = hidden_dim // num_heads
+        
         # Input projection to the hidden dimension
         self.project = TypeProjector(in_dims, hidden_dim)
         
         # Build GAT layers dynamically based on metadata
+        # All layers: hidden_dim -> hidden_dim (normalized so final output = hidden_dim, not hidden_dim * num_heads)
         self.convs = nn.ModuleList()
         for i in range(num_layers):
-            in_dim = hidden_dim if i == 0 else hidden_dim * num_heads
+            in_dim = hidden_dim
             
             # Build conv dict for all edge types in metadata
             conv_dict = {}
             for edge_type in metadata[1]:
                 conv_dict[edge_type] = GATv2Conv(
                     in_channels=in_dim,
-                    out_channels=hidden_dim,
+                    out_channels=hidden_dim_per_head,
                     heads=num_heads,
                     dropout=dropout,
                     add_self_loops=False,
@@ -66,6 +74,7 @@ class GAT(nn.Module):
             hetero_conv = HeteroConv(conv_dict, aggr='sum')
             self.convs.append(hetero_conv)
         
+        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
         self.dropout_layer = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         self.reset_parameters()
@@ -81,8 +90,17 @@ class GAT(nn.Module):
         x_dict: dict[str, torch.Tensor], 
         edge_index_dict: dict[tuple[str, str, str], torch.Tensor]
     ) -> dict[str, torch.Tensor]:
+        """Forward pass that returns embeddings (for backward compatibility with tests)."""
         return self.encode(x_dict, edge_index_dict)
     
+    def score(
+        self,
+        user_emb: torch.Tensor,
+        item_emb: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute scores using the weighted dot product head."""
+        return self.head(user_emb, item_emb)
+
     def encode(
         self, 
         x_dict: dict[str, torch.Tensor], 
@@ -102,8 +120,8 @@ class GAT(nn.Module):
             
             # Apply dropout and activation between layers (except last layer)
             if i < self.num_layers - 1:
-                z_dict = {k: self.activation(v) for k, v in z_dict.items()}
                 z_dict = {k: self.dropout_layer(v) for k, v in z_dict.items()}
+                z_dict = {k: self.activation(v) for k, v in z_dict.items()}
         
         # Return embeddings for users and items
-        return {'user': z_dict['user'], 'item': z_dict['item']}
+        return z_dict
