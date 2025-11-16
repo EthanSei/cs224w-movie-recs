@@ -9,5 +9,5 @@ params:
   metadata: null # Overridden by data
   hidden_dim: 128
   heads: 2
-  layers: 3
+  layers: 2
   dropout: 0.1

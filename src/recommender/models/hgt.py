@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import HGTConv
-from recommender.models.layers import TypeProjector
+from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
 
 """
 Heterogeneous Graph Transformer (HGT) model.
@@ -29,8 +29,13 @@ class HGT(nn.Module):
             )
             for _ in range(layers)
         ])
+        self.layers = layers
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
+        
+        # Weighted dot product head for scoring
+        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
+        
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -38,14 +43,22 @@ class HGT(nn.Module):
             conv.reset_parameters()
 
     def forward(self, x_dict: dict[str, torch.Tensor], edge_index_dict: dict[tuple[str, str, str], torch.Tensor]) -> dict[str, torch.Tensor]:
-        z_dict = self.encode(x_dict, edge_index_dict)
-        # TODO: Add heads
-        return z_dict
+        """Forward pass that returns embeddings (for backward compatibility with tests)."""
+        return self.encode(x_dict, edge_index_dict)
+    
+    def score(
+        self,
+        user_emb: torch.Tensor,
+        item_emb: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute scores using the weighted dot product head."""
+        return self.head(user_emb, item_emb)
 
     def encode(self, x_dict: dict[str, torch.Tensor], edge_index_dict: dict[tuple[str, str, str], torch.Tensor]) -> dict[str, torch.Tensor]:
         z_dict = self.project(x_dict)
-        for conv in self.convs:
+        for i, conv in enumerate(self.convs):
             z_dict = conv(z_dict, edge_index_dict)
-            z_dict = {k: self.dropout(v) for k, v in z_dict.items()}
-            z_dict = {k: self.activation(v) for k, v in z_dict.items()}
+            if i < self.layers - 1:
+                z_dict = {k: self.dropout(v) for k, v in z_dict.items()}
+                z_dict = {k: self.activation(v) for k, v in z_dict.items()}
         return z_dict

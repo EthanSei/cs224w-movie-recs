@@ -1,32 +1,28 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
 
 class TwoTower(nn.Module):
     """
     Two-tower model for recommendation systems.
     Implements encode() and forward() methods that take x_dict and edge_index_dict.
-    Requires user_dim and item_dim to be specified at initialization.
+    Requires in_dims dict with 'user' and 'item' keys to be specified at initialization.
     Supports variable number of layers for flexible architecture depth.
     """
     def __init__(
         self, 
-        user_dim: int, 
-        item_dim: int, 
+        in_dims: dict[str, int],
         hidden_dim: int = 128, 
         num_layers: int = 2,
-        dropout: float = 0.1
+        dropout: float = 0.1,
     ):
         super(TwoTower, self).__init__()
-        self.user_dim = user_dim
-        self.item_dim = item_dim
-        self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
-        self.dropout = dropout
-        
-        # Build towers in initialization
-        self.user_tower = self._build_tower(user_dim, hidden_dim, num_layers, dropout)
-        self.item_tower = self._build_tower(item_dim, hidden_dim, num_layers, dropout)
+        self.project = TypeProjector(in_dims, hidden_dim)
+        self.user_tower = self._build_tower(in_dims['user'], hidden_dim, num_layers, dropout)
+        self.item_tower = self._build_tower(in_dims['item'], hidden_dim, num_layers, dropout)
+        # Weighted dot product head for scoring
+        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
     
     def _build_tower(self, input_dim, hidden_dim, num_layers, dropout):
         """Build a tower network with variable number of layers."""
@@ -73,7 +69,14 @@ class TwoTower(nn.Module):
         edge_index_dict: dict[tuple[str, str, str], torch.Tensor]
     ) -> dict[str, torch.Tensor]:
         """
-        Forward pass that encodes nodes into embeddings.
+        Forward pass that returns embeddings (for backward compatibility with tests).
         """
-        # TODO: Add heads
         return self.encode(x_dict, edge_index_dict)
+    
+    def score(
+        self,
+        user_emb: torch.Tensor,
+        item_emb: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute scores using the weighted dot product head."""
+        return self.head(user_emb, item_emb)
