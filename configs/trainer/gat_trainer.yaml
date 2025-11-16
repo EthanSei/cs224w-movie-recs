@@ -1,7 +1,0 @@
-# GAT Trainer Configuration
-# Trainer for graph-aware models that need edge connectivity
-
-module: "recommender.training.gat_trainer:GATTrainer"
-params:
-  num_epochs: 100
-

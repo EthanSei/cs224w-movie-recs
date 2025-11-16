@@ -1,4 +1,7 @@
-name: two_tower
+# Two-tower Model Configuration
+# Two-tower model for user-item recommendation
+
+name: TwoTower
 module: recommender.models.two_tower:TwoTower
 params:
   user_dim: 100

@@ -1,5 +1,5 @@
 """
-Graph Attention Network (GAT) for heterogeneous bipartite user-movie recommendation.
+Graph Attention Network (GAT) for heterogeneous bipartite user-item recommendation.
 
 Based on: "Graph Attention Networks" (Veličković et al., 2017)
 https://arxiv.org/pdf/1710.10903
@@ -12,24 +12,28 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv, HeteroConv
+from recommender.models.layers import TypeProjector
 
 
 class GAT(nn.Module):
     """
-    Graph Attention Network for heterogeneous bipartite user-movie recommendation.
+    Graph Attention Network for heterogeneous bipartite user-item recommendation.
     
     Uses PyG's GATv2Conv wrapped in HeteroConv to handle the heterogeneous graph
-    structure with users and movies. The model applies multi-head attention to learn
-    which user-movie interactions are most important for generating embeddings.
+    structure with users and items. The model applies multi-head attention to learn
+    which user-item interactions are most important for generating embeddings.
+    
+    Implements encode() and forward() methods that take x_dict and edge_index_dict.
+    Returns dict with 'user' and 'item' keys to be compatible with simple_trainer.
     """
     def __init__(
         self,
-        user_dim,
-        item_dim,
-        hidden_dim=128,
-        num_heads=2,
-        num_layers=2,
-        dropout=0.1
+        in_dims: dict[str, int],
+        metadata: tuple[list[str], list[tuple[str, str, str]]],
+        hidden_dim: int = 128,
+        num_heads: int = 2,
+        num_layers: int = 2,
+        dropout: float = 0.1,
     ):
         super(GAT, self).__init__()
         
@@ -37,56 +41,69 @@ class GAT(nn.Module):
         self.num_heads = num_heads
         self.dropout = dropout
         self.hidden_dim = hidden_dim
+        self.metadata = metadata
         
-        #Input projection to the hidden dimension
-        self.user_proj = nn.Linear(user_dim, hidden_dim)
-        self.item_proj = nn.Linear(item_dim, hidden_dim)
+        # Input projection to the hidden dimension
+        self.project = TypeProjector(in_dims, hidden_dim)
         
-        # Build GAT layers for both type of edges
+        # Build GAT layers dynamically based on metadata
         self.convs = nn.ModuleList()
         for i in range(num_layers):
             in_dim = hidden_dim if i == 0 else hidden_dim * num_heads
             
-            hetero_conv = HeteroConv({
-                ('user', 'rates', 'movie'): GATv2Conv(
+            # Build conv dict for all edge types in metadata
+            conv_dict = {}
+            for edge_type in metadata[1]:
+                conv_dict[edge_type] = GATv2Conv(
                     in_channels=in_dim,
                     out_channels=hidden_dim,
                     heads=num_heads,
                     dropout=dropout,
                     add_self_loops=False,
                     concat=True
-                ),
-                ('movie', 'rev_rates', 'user'): GATv2Conv(
-                    in_channels=in_dim,
-                    out_channels=hidden_dim,
-                    heads=num_heads,
-                    dropout=dropout,
-                    add_self_loops=False,
-                    concat=True
-                ),
-            }, aggr='sum')
+                )
             
+            hetero_conv = HeteroConv(conv_dict, aggr='sum')
             self.convs.append(hetero_conv)
+        
+        self.dropout_layer = nn.Dropout(dropout)
+        self.activation = nn.ReLU()
+        self.reset_parameters()
     
-    def forward(self, user_features, item_features, edge_index_dict):
+    def reset_parameters(self):
+        """Reset parameters of all GAT layers."""
+        for conv in self.convs:
+            for gat_conv in conv.convs.values():
+                gat_conv.reset_parameters()
+    
+    def forward(
+        self, 
+        x_dict: dict[str, torch.Tensor], 
+        edge_index_dict: dict[tuple[str, str, str], torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
+        return self.encode(x_dict, edge_index_dict)
+    
+    def encode(
+        self, 
+        x_dict: dict[str, torch.Tensor], 
+        edge_index_dict: dict[tuple[str, str, str], torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
+        """
+        Encode nodes into embeddings.
+        Takes x_dict and edge_index_dict.
+        Returns dict with 'user' and 'item' keys.
+        """
         # Project input features to the hidden dimension
-        x_dict = {
-            'user': self.user_proj(user_features),
-            'movie': self.item_proj(item_features)
-        }
-
-        # Apply GAT layers for both type of edges
+        z_dict = self.project(x_dict)
+        
+        # Apply GAT layers
         for i, conv in enumerate(self.convs):
-        
-            x_dict = conv(x_dict, edge_index_dict)
-
-            #for dropout and activation between layers
+            z_dict = conv(z_dict, edge_index_dict)
+            
+            # Apply dropout and activation between layers (except last layer)
             if i < self.num_layers - 1:
-                x_dict = {key: F.relu(x) for key, x in x_dict.items()}
-                x_dict = {
-                    key: F.dropout(x, p=self.dropout, training=self.training)
-                    for key, x in x_dict.items()
-                }
+                z_dict = {k: self.activation(v) for k, v in z_dict.items()}
+                z_dict = {k: self.dropout_layer(v) for k, v in z_dict.items()}
         
-        # Return embeddings for users and movies
-        return x_dict['user'], x_dict['movie']
+        # Return embeddings for users and items
+        return {'user': z_dict['user'], 'item': z_dict['item']}
