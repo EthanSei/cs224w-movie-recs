@@ -1,4 +1,7 @@
-name: hgt
+# HGT Model Configuration
+# Heterogeneous Graph Transformer for user-item recommendation
+
+name: HGT
 module: recommender.models.hgt:HGT
 _partial_: true
 params:

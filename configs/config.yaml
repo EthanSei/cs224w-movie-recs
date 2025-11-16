@@ -1,7 +1,7 @@
 defaults:
  - _self_
  - data: movielens
- - model: two_tower
+ - model: gat
  - loss: bpr
  - trainer: default
 hydra:

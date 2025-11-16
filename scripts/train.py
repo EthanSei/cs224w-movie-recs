@@ -13,20 +13,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def set_seed(seed: int = 42):
-    """Set random seeds for reproducibility."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
 @hydra.main(version_base=None, config_path="../configs", config_name="config")
 def main(cfg: DictConfig):
     # Set seed for reproducibility
     seed = cfg.get('seed', 42)
-    set_seed(seed)
+    _set_seed(seed)
 
     logger.info("Starting training on dataset: %s, model: %s, loss: %s, trainer: %s", cfg.data.name, cfg.model.name, cfg.loss.name, cfg.trainer.name)
     
@@ -47,11 +38,19 @@ def main(cfg: DictConfig):
 
     # Load trainer
     TrainerClass = load_module(cfg.trainer.module)
-    trainer_params = cfg.trainer.params.copy() if 'params' in cfg.trainer else {}
-    trainer = TrainerClass(**trainer_params)
+    trainer = TrainerClass(**cfg.trainer.params)
 
     # Train
     trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=True)
+
+def _set_seed(seed: int = 42):
+    """Set random seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def _construct_model_params(cfg_model: DictConfig, train_data: HeteroData) -> dict:
     in_dims = {
