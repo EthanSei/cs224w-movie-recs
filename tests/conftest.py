@@ -1,6 +1,7 @@
 # tests/conftest.py
 import torch
 import pytest
+import pandas as pd
 from torch_geometric.data import HeteroData
 
 @pytest.fixture
@@ -71,3 +72,56 @@ def hetero_graph_50_50():
     g['user', 'rates', 'item'].edge_index = ui_edge_index
     g['item', 'rev_rates', 'user'].edge_index = ui_edge_index.flip(0)
     return g
+
+@pytest.fixture
+def sample_movies_df():
+    """Sample movies DataFrame for testing feature building."""
+    return pd.DataFrame({
+        "movieId": [1, 2, 3],
+        "title": ["Movie 1 (1995)", "Movie 2 (2000)", "Movie 3 (2010)"],
+        "genres": ["Action|Adventure", "Comedy|Romance", "Drama"]
+    })
+
+@pytest.fixture
+def movies_with_known_years():
+    """Movies DataFrame with titles that need known_years lookup."""
+    return pd.DataFrame({
+        "movieId": [1, 2],
+        "title": ["Ready Player One", "Moonlight"],
+        "genres": ["Action", "Drama"]
+    })
+
+@pytest.fixture
+def movies_edge_cases():
+    """Movies DataFrame with edge cases (empty genres, out-of-bounds years)."""
+    return pd.DataFrame({
+        "movieId": [1, 2, 3, 4],
+        "title": ["Movie 1 (1995)", "Movie 2 (2000)", "Old Movie (1890)", "Future Movie (2030)"],
+        "genres": ["Action|Adventure", "", "Drama", "Sci-Fi"]
+    })
+
+@pytest.fixture
+def movies_no_year():
+    """Movies DataFrame with no extractable year."""
+    return pd.DataFrame({
+        "movieId": [1],
+        "title": ["Unknown Movie"],
+        "genres": ["Action"]
+    })
+
+@pytest.fixture
+def movies_realistic():
+    """Realistic MovieLens-style movies DataFrame."""
+    return pd.DataFrame({
+        "movieId": [1, 2, 3],
+        "title": [
+            "Toy Story (1995)",
+            "Jumanji (1995)",
+            "Ready Player One"
+        ],
+        "genres": [
+            "Adventure|Animation|Children|Comedy|Fantasy",
+            "Adventure|Children|Fantasy",
+            "Action|Adventure|Sci-Fi"
+        ]
+    })

@@ -41,7 +41,9 @@ def main(cfg: DictConfig):
     trainer = TrainerClass(**cfg.trainer.params)
 
     # Train
-    trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=True)
+    trained_model = trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=True)
+    torch.save(trained_model.state_dict(), f"runs/{cfg.data.name}/{cfg.model.name}/{cfg.loss.name}/{cfg.trainer.name}.pth")
+    logger.info(f"Saved model to runs/{cfg.data.name}/{cfg.model.name}/{cfg.loss.name}/{cfg.trainer.name}.pth")
 
 def _set_seed(seed: int = 42):
     """Set random seeds for reproducibility."""
