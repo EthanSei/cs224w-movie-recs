@@ -40,6 +40,8 @@ def _download_movielens_dataset(dataset_name: str, chunk_size: int = DOWNLOAD_CH
         with zipfile.ZipFile(zip_path) as zip_ref:
             with zip_ref.open(f"{dataset_name}/movies.csv") as f:
                 movies = pd.read_csv(f)
+            with zip_ref.open(f"{dataset_name}/tags.csv") as f:
+                tags = pd.read_csv(f)
             with zip_ref.open(f"{dataset_name}/ratings.csv") as f:
                 ratings = pd.read_csv(
                     f,
@@ -51,4 +53,4 @@ def _download_movielens_dataset(dataset_name: str, chunk_size: int = DOWNLOAD_CH
                         "timestamp": "int64",
                     },
                 )
-        return movies, ratings
+        return movies, tags, ratings
