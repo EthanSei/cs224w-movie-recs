@@ -1,6 +1,13 @@
-.PHONY: setup load reload train test
+.PHONY: setup load reload train test venv
 
 env ?= dev
+VENV = CS224W-PROJECT
+
+venv:
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install --upgrade pip
+	$(VENV)/bin/pip install -e .[test]
+	@echo "Activate with: source $(VENV)/bin/activate"
 
 setup:
 	pip install --upgrade pip
