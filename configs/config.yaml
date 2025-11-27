@@ -1,7 +1,7 @@
 defaults:
  - _self_
  - data: movielens
- - model: gat
+ - model: lightgcn
  - loss: bpr
  - trainer: default
 hydra:
