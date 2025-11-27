@@ -1,0 +1,5 @@
+name: default
+module: recommender.training.simple_trainer:SimpleTrainer
+params:
+  k: 10 # Used for evaluation metrics like Recall@K
+  run_test: True
