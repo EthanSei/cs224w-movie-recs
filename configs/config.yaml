@@ -4,6 +4,7 @@ defaults:
  - model: gat
  - loss: bpr
  - trainer: default
+ - evaluator: default
 hydra:
   run:
     dir: runs/${now:%Y-%m-%d}/${now:%H-%M-%S}

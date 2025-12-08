@@ -12,8 +12,10 @@ load:
 force_load:
 	python scripts/load_data.py --env $(env) --force
 
+# Modify model for training by setting MODEL variable, 
+#	make train MODEL=lightgcn (default is gat)
 train:
-	python scripts/train.py
+	python scripts/train.py model=$(MODEL)
 
 setup_test:
 	pip install --upgrade pip

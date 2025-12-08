@@ -1,0 +1,11 @@
+# LightGCN Model Configuration
+# LightGCN Simplification for user-item recommendation
+
+name: LightGCN
+module: "recommender.models.lightgcn:LightGCN"
+params:
+  num_users: 610   # For MovieLens 100K, need to change for larger datasets
+  num_items: 9742  # For MovieLens 100K, need to change for larger datasets
+  hidden_dim: 128
+  num_layers: 2
+  dropout: 0.1
