@@ -1,5 +1,5 @@
 name: default
-module: recommender.training.simple_trainer:SimpleTrainer
+module: recommender.evaluation.evaluator:Evaluator
 params:
-  k: 10 # Used for evaluation metrics like Recall@K
-  run_test: True
+  k: 10
+  device: cpu

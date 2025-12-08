@@ -7,7 +7,6 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 from torch_geometric.data import HeteroData
 from recommender.utils.module_loader import load_module
-from recommender.evaluation.evaluator import evaluate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,13 +50,6 @@ def run_training(cfg: DictConfig):
     torch.save(trained_model.state_dict(), save_path)
     logger.info(f"Saved model to {save_path}")
     logger.info("Training completed.")
-
-    
-    # Run evaluation on test set if specified
-    if cfg.evaluator.params.get('run_test', True):
-        logger.info("Evaluating on test set...")
-        evaluate(trained_model, test_data, k=cfg.evaluator.params.k, device=cfg.trainer.params.device)
-
 
 def _set_seed(seed: int = 42):
     """Set random seeds for reproducibility."""

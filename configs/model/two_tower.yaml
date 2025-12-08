@@ -7,4 +7,4 @@ params:
   in_dims: null  # Will be set from data dimensions in train.py
   hidden_dim: 128
   num_layers: 2
-  dropout: 0.1
+  dropout: 0.01

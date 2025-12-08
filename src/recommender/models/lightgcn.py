@@ -7,7 +7,6 @@ Based on: "LightGCN: Simplifying and Powering Graph Convolution Network for Reco
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch_geometric.nn import LGConv
 from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
 
@@ -25,8 +24,8 @@ class LightGCN(nn.Module):
     """
     def __init__(
         self,
-        num_users: int,
-        num_items: int,
+        in_dims: dict[str, int],
+        metadata: tuple[list[str], list[tuple[str, str, str]]],
         hidden_dim: int = 128,
         num_layers: int = 2,
         dropout: float = 0.1,
@@ -36,11 +35,10 @@ class LightGCN(nn.Module):
         self.num_layers = num_layers
         self.dropout = dropout
         self.hidden_dim = hidden_dim
-        self.num_users = num_users
-        self.num_items = num_items
+        self.metadata = metadata
 
-        self.user_emb = nn.Embedding(self.num_users, hidden_dim)
-        self.item_emb = nn.Embedding(self.num_items, hidden_dim)
+        # Project input features to hidden_dim
+        self.project = TypeProjector(in_dims, hidden_dim)
         
         self.convs = nn.ModuleList([LGConv() for _ in range(num_layers)])
         
@@ -50,8 +48,11 @@ class LightGCN(nn.Module):
         self.reset_parameters()
     
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.user_emb.weight)
-        nn.init.xavier_uniform_(self.item_emb.weight)
+        # Reset parameters of the projection layer
+        for projector in self.project.projector.values():
+            nn.init.xavier_uniform_(projector.weight)
+            if projector.bias is not None:
+                nn.init.zeros_(projector.bias)
     
     def forward(
         self, 
@@ -85,6 +86,13 @@ class LightGCN(nn.Module):
         Takes x_dict and edge_index_dict.
         Returns dict with 'user' and 'item' keys.
         """
+        # Project input features to hidden_dim
+        z_dict = self.project(x_dict)
+        user_features = z_dict['user']
+        item_features = z_dict['item']
+        
+        num_users = user_features.shape[0]
+        num_items = item_features.shape[0]
 
         user_item_edges = edge_index_dict[('user', 'rates', 'item')]
         item_user_edges = edge_index_dict[('item', 'rev_rates', 'user')]
@@ -92,13 +100,13 @@ class LightGCN(nn.Module):
         # Shift item indices by num_users to align with concatenated embeddings
         item_user_edges = item_user_edges.clone()
         user_item_edges = user_item_edges.clone()
-        user_item_edges[1] += self.num_users
-        item_user_edges[0] += self.num_users
+        user_item_edges[1] += num_users
+        item_user_edges[0] += num_users
 
         edge_index = torch.cat([user_item_edges, item_user_edges], dim=1)
 
-        # Project initial embeddings to hidden_dim
-        x = torch.cat([self.user_emb.weight, self.item_emb.weight], dim=0)
+        # Concatenate user and item features as initial embeddings
+        x = torch.cat([user_features, item_features], dim=0)
         
         # Store all layer embeddings for later averaging
         all_embeddings = [x]
@@ -111,6 +119,6 @@ class LightGCN(nn.Module):
 
         final_x = torch.mean(torch.stack(all_embeddings), dim=0) # Average over all layers
         return {
-            "user": final_x[:self.num_users],
-            "item": final_x[self.num_users:]
+            "user": final_x[:num_users],
+            "item": final_x[num_users:]
         }
