@@ -233,14 +233,24 @@ def create_mock_model_with_scores(num_users, num_items, hidden_dim, user_item_sc
     Args:
         num_users: Number of users
         num_items: Number of items
-        hidden_dim: Hidden dimension size
+        hidden_dim: Hidden dimension size (must be >= num_users)
         user_item_scores: Dict mapping (user_idx, item_idx) -> score_value
-    """
-    user_emb = torch.zeros(num_users, hidden_dim)
-    item_emb = torch.zeros(num_items, hidden_dim)
     
+    The trick: use one-hot user embeddings and encode desired scores in item embeddings.
+    - user_emb[u] is one-hot at position u
+    - item_emb[i][u] = desired score for (u, i)
+    Then dot product score(u, i) = item_emb[i][u] = desired score
+    """
+    assert hidden_dim >= num_users, "hidden_dim must be >= num_users for this approach"
+    
+    # User embeddings: one-hot vectors
+    user_emb = torch.zeros(num_users, hidden_dim)
+    for u in range(num_users):
+        user_emb[u, u] = 1.0
+    
+    # Item embeddings: encode desired scores at user positions
+    item_emb = torch.zeros(num_items, hidden_dim)
     for (u_idx, i_idx), score in user_item_scores.items():
-        user_emb[u_idx, :4] = score
-        item_emb[i_idx, :4] = score
+        item_emb[i_idx, u_idx] = score
     
     return MockModel(user_emb, item_emb)
