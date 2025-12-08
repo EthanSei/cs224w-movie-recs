@@ -21,7 +21,7 @@ def download_data(dataset_name: str, force: bool = False, env: str = "dev", chun
     else:
         raise ValueError(f"Dataset {dataset_name} not supported for environment {env}")
 
-def _download_movielens_dataset(dataset_name: str, chunk_size: int = DOWNLOAD_CHUNK_SIZE) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def _download_movielens_dataset(dataset_name: str, chunk_size: int = DOWNLOAD_CHUNK_SIZE) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     url = f"https://files.grouplens.org/datasets/movielens/{dataset_name}.zip"
     zip_path = RAW_DATA_DIR / f"{dataset_name}.zip"
@@ -36,21 +36,22 @@ def _download_movielens_dataset(dataset_name: str, chunk_size: int = DOWNLOAD_CH
         print(f"Dataset {dataset_name} downloaded successfully")
     else:
         print(f"Dataset {dataset_name} already downloaded")
-
-        with zipfile.ZipFile(zip_path) as zip_ref:
-            with zip_ref.open(f"{dataset_name}/movies.csv") as f:
-                movies = pd.read_csv(f)
-            with zip_ref.open(f"{dataset_name}/tags.csv") as f:
-                tags = pd.read_csv(f)
-            with zip_ref.open(f"{dataset_name}/ratings.csv") as f:
-                ratings = pd.read_csv(
-                    f,
-                    usecols=["userId", "movieId", "rating", "timestamp"],
-                    dtype={
-                        "userId": "int32",
-                        "movieId": "int32",
-                        "rating": "float32",
-                        "timestamp": "int64",
-                    },
-                )
-        return movies, tags, ratings
+    
+    # Extract data from zip file (whether just downloaded or already existed)
+    with zipfile.ZipFile(zip_path) as zip_ref:
+        with zip_ref.open(f"{dataset_name}/movies.csv") as f:
+            movies = pd.read_csv(f)
+        with zip_ref.open(f"{dataset_name}/tags.csv") as f:
+            tags = pd.read_csv(f)
+        with zip_ref.open(f"{dataset_name}/ratings.csv") as f:
+            ratings = pd.read_csv(
+                f,
+                usecols=["userId", "movieId", "rating", "timestamp"],
+                dtype={
+                    "userId": "int32",
+                    "movieId": "int32",
+                    "rating": "float32",
+                    "timestamp": "int64",
+                },
+            )
+    return movies, tags, ratings

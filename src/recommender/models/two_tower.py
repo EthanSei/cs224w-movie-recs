@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
+from recommender.models.model_helpers import WeightedDotProductHead
 
 class TwoTower(nn.Module):
     """
@@ -18,7 +18,6 @@ class TwoTower(nn.Module):
         dropout: float = 0.1,
     ):
         super(TwoTower, self).__init__()
-        self.project = TypeProjector(in_dims, hidden_dim)
         self.user_tower = self._build_tower(in_dims['user'], hidden_dim, num_layers, dropout)
         self.item_tower = self._build_tower(in_dims['item'], hidden_dim, num_layers, dropout)
         # Weighted dot product head for scoring

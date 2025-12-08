@@ -1,4 +1,4 @@
-.PHONY: setup load reload train test
+.PHONY: setup load force_load train eval setup_test test
 
 env ?= dev
 
@@ -15,7 +15,13 @@ force_load:
 # Modify model for training by setting MODEL variable, 
 #	make train MODEL=lightgcn (default is gat)
 train:
-	python scripts/train.py model=$(MODEL)
+	python scripts/train.py
+
+# Evaluate a pre-trained model, or train a new one with --train flag
+#	make evaluate MODEL=gat (default is gat)
+#	make evaluate MODEL=gat --train (to train a new model)
+eval:
+	python scripts/evaluate.py $(ARGS)
 
 setup_test:
 	pip install --upgrade pip

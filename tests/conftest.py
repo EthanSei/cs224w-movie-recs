@@ -125,3 +125,132 @@ def movies_realistic():
             "Action|Adventure|Sci-Fi"
         ]
     })
+
+
+class MockModel:
+    """Mock model for testing evaluator."""
+    def __init__(self, user_embeddings, item_embeddings):
+        """
+        Args:
+            user_embeddings: Tensor of shape [num_users, hidden_dim]
+            item_embeddings: Tensor of shape [num_items, hidden_dim]
+        """
+        self.user_embeddings = user_embeddings
+        self.item_embeddings = item_embeddings
+        self.hidden_dim = user_embeddings.size(1)
+        self.training = False
+    
+    def eval(self):
+        self.training = False
+    
+    def to(self, device):
+        self.user_embeddings = self.user_embeddings.to(device)
+        self.item_embeddings = self.item_embeddings.to(device)
+        return self
+    
+    def encode(self, x_dict, edge_index_dict):
+        """Return pre-computed embeddings."""
+        return {
+            "user": self.user_embeddings,
+            "item": self.item_embeddings
+        }
+    
+    def score(self, user_emb, item_emb):
+        """Compute dot product scores."""
+        return (user_emb * item_emb).sum(dim=1)
+
+
+@pytest.fixture
+def simple_test_data():
+    """Simple test data with 3 users, 5 items, and known test edges."""
+    data = HeteroData()
+    data['user'].x = torch.randn(3, 16)
+    data['item'].x = torch.randn(5, 32)
+    
+    # Training edges (for message passing)
+    train_edges = torch.tensor([[0, 0, 1, 1], [0, 1, 0, 2]], dtype=torch.long)
+    data['user', 'rates', 'item'].edge_index = train_edges
+    
+    # Test edges (ground truth for evaluation)
+    test_edges = torch.tensor([[0, 1, 2], [2, 3, 4]], dtype=torch.long)
+    data['user', 'rates', 'item'].edge_label_index = test_edges
+    
+    return data
+
+
+@pytest.fixture
+def mock_model_simple(simple_test_data):
+    """Mock model with deterministic embeddings for simple test."""
+    num_users, num_items = 3, 5
+    hidden_dim = 8
+    
+    # Create embeddings that give predictable scores
+    # User 0 should score highest with item 2
+    # User 1 should score highest with item 3
+    # User 2 should score highest with item 4
+    user_emb = torch.zeros(num_users, hidden_dim)
+    item_emb = torch.zeros(num_items, hidden_dim)
+    
+    # Set up so user-item pairs have high scores
+    user_emb[0, :4] = 1.0  # User 0
+    item_emb[2, :4] = 1.0  # Item 2 (test edge for user 0)
+    
+    user_emb[1, :4] = 1.0  # User 1
+    item_emb[3, :4] = 1.0  # Item 3 (test edge for user 1)
+    
+    user_emb[2, :4] = 1.0  # User 2
+    item_emb[4, :4] = 1.0  # Item 4 (test edge for user 2)
+    
+    return MockModel(user_emb, item_emb)
+
+
+# Helper functions for model tests
+def get_in_dims(graph):
+    """Helper to extract input dimensions from a graph."""
+    return {node_type: graph[node_type].x.size(-1) for node_type in graph.node_types}
+
+
+def create_eval_test_data(num_users=2, num_items=5, train_edges=None, test_edges=None):
+    """Helper to create test data for evaluator tests."""
+    data = HeteroData()
+    data['user'].x = torch.randn(num_users, 16)
+    data['item'].x = torch.randn(num_items, 32)
+    
+    if train_edges is None:
+        train_edges = torch.tensor([[0], [0]], dtype=torch.long)
+    data['user', 'rates', 'item'].edge_index = train_edges
+    
+    if test_edges is not None:
+        data['user', 'rates', 'item'].edge_label_index = test_edges
+    
+    return data
+
+
+def create_mock_model_with_scores(num_users, num_items, hidden_dim, user_item_scores):
+    """
+    Helper to create a MockModel with specific user-item score patterns.
+    
+    Args:
+        num_users: Number of users
+        num_items: Number of items
+        hidden_dim: Hidden dimension size (must be >= num_users)
+        user_item_scores: Dict mapping (user_idx, item_idx) -> score_value
+    
+    The trick: use one-hot user embeddings and encode desired scores in item embeddings.
+    - user_emb[u] is one-hot at position u
+    - item_emb[i][u] = desired score for (u, i)
+    Then dot product score(u, i) = item_emb[i][u] = desired score
+    """
+    assert hidden_dim >= num_users, "hidden_dim must be >= num_users for this approach"
+    
+    # User embeddings: one-hot vectors
+    user_emb = torch.zeros(num_users, hidden_dim)
+    for u in range(num_users):
+        user_emb[u, u] = 1.0
+    
+    # Item embeddings: encode desired scores at user positions
+    item_emb = torch.zeros(num_items, hidden_dim)
+    for (u_idx, i_idx), score in user_item_scores.items():
+        item_emb[i_idx, u_idx] = score
+    
+    return MockModel(user_emb, item_emb)

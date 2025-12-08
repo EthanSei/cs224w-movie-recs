@@ -4,8 +4,8 @@
 name: LightGCN
 module: "recommender.models.lightgcn:LightGCN"
 params:
-  num_users: 610   # For MovieLens 100K, need to change for larger datasets
-  num_items: 9742  # For MovieLens 100K, need to change for larger datasets
+  in_dims: null # Overridden by data
+  metadata: null # Overridden by data
   hidden_dim: 128
   num_layers: 2
-  dropout: 0.1
+  dropout: 0.01

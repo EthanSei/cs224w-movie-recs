@@ -10,4 +10,4 @@ params:
   hidden_dim: 128
   heads: 2
   layers: 2
-  dropout: 0.1
+  dropout: 0.01
