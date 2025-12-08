@@ -2,7 +2,7 @@ name: default
 module: recommender.training.simple_trainer:SimpleTrainer
 params:
   num_epochs: 400
-  learning_rate: 0.001
+  learning_rate: 0.00446 # tunable parameter
   device: cpu
   patience: 50
   val_frequency: 5  # validate every N epochs (increase for larger datasets)

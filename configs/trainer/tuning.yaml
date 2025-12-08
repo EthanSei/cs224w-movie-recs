@@ -1,0 +1,12 @@
+# Trainer configuration optimized for hyperparameter tuning
+# Uses fewer epochs since we only need relative performance comparison
+
+name: tuning
+module: recommender.training.simple_trainer:SimpleTrainer
+params:
+  num_epochs: 100
+  learning_rate: 0.001
+  device: cpu
+  patience: 20
+  val_frequency: 5
+
