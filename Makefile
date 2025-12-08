@@ -1,4 +1,4 @@
-.PHONY: setup load force_load train eval setup_test test
+.PHONY: setup load force_load train eval tune setup_test test
 
 env ?= dev
 
@@ -22,6 +22,13 @@ train:
 #	make evaluate MODEL=gat --train (to train a new model)
 eval:
 	python scripts/evaluate.py $(ARGS)
+
+# Hyperparameter tuning with Optuna sweeper
+#	make tune                                    - tune config with default sweeper
+#	make tune ARGS="model=gat +sweeper=gat"      - tune GAT with GAT-specific sweeper
+#	make tune ARGS="+sweeper=default hydra.sweeper.n_trials=10" - quick tune with 10 trials
+tune:
+	python scripts/tune.py +sweeper=default $(ARGS) --multirun
 
 setup_test:
 	pip install --upgrade pip
