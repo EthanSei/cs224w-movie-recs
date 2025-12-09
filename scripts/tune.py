@@ -30,6 +30,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch_geometric.data import HeteroData
 
 from recommender.utils.module_loader import load_module
+from recommender.utils.device import get_device
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,8 +50,12 @@ def tune(cfg: DictConfig) -> float:
     seed = cfg.get('seed', 42)
     _set_seed(seed)
     
+    # Log device info (trainer/evaluator will use this device via config)
+    device = get_device(cfg.trainer.params.get('device', 'auto'))
+    
     logger.info("=" * 60)
     logger.info("Starting tuning trial")
+    logger.info(f"Device: {device}")
     logger.info(f"Model: {cfg.model.name}")
     logger.info(f"Model params: {OmegaConf.to_yaml(cfg.model.params)}")
     logger.info(f"Trainer params: {OmegaConf.to_yaml(cfg.trainer.params)}")

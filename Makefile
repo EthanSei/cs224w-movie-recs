@@ -44,11 +44,16 @@ else
 endif
 
 # Hyperparameter tuning with Optuna sweeper
-#	make tune                                    - tune config with default sweeper
-#	make tune ARGS="model=gat +sweeper=gat"      - tune GAT with GAT-specific sweeper
-#	make tune ARGS="+sweeper=default hydra.sweeper.n_trials=10" - quick tune with 10 trials
+#	make tune                     - tune default model with default sweeper
+#	make tune MODEL=gat           - tune GAT model with GAT-specific sweeper
+#	make tune MODEL=hgt           - tune HGT model with HGT-specific sweeper
+#	make tune ARGS="hydra.sweeper.n_trials=10" - quick tune with 10 trials
 tune:
+ifdef MODEL
+	python scripts/tune.py model=$(MODEL) +sweeper=$(MODEL) $(ARGS) --multirun
+else
 	python scripts/tune.py +sweeper=default $(ARGS) --multirun
+endif
 
 setup_test:
 	pip install --upgrade pip
