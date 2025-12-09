@@ -2,6 +2,7 @@ import logging
 import tqdm
 import torch
 import torch_geometric.data as HeteroData
+from recommender.utils.device import get_device
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -17,13 +18,13 @@ class SimpleTrainer:
         self, 
         num_epochs: int,
         learning_rate: float = 1e-3,
-        device: str = "cpu",
+        device: str = "auto",
         patience: int = None,
         val_frequency: int = 1,
     ):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
-        self.device = torch.device(device)
+        self.device = get_device(device)
         self.patience = patience
         self.val_frequency = max(1, val_frequency)
 

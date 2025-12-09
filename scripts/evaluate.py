@@ -48,7 +48,7 @@ def run_evaluation(cfg: DictConfig):
     EvaluatorClass = load_module(cfg.evaluator.module)
     evaluator = EvaluatorClass(**cfg.evaluator.params)
     
-    logger.info(f"Evaluating on test data with k={evaluator.k}, device={evaluator.device}")
+    logger.info(f"Evaluating on test data with k={evaluator.k}")
     hr, ndcg, recall = evaluator.evaluate(model, test_data, train_data=train_data, val_data=val_data)
     
     logger.info("=" * 50)
