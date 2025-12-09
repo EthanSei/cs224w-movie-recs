@@ -19,16 +19,29 @@ load:
 force_load:
 	python scripts/load_data.py --env $(env) --force
 
-# Modify model for training by setting MODEL variable, 
-#	make train MODEL=lightgcn (default is gat)
+# Train a model
+#	make train                    - train with default model (from configs)
+#	make train MODEL=gat          - train GAT model
+#	make train MODEL=hgt          - train HGT model
+#	make train ARGS="trainer.params.epochs=50" - pass additional hydra overrides
 train:
-	python scripts/train.py
+ifdef MODEL
+	python scripts/train.py model=$(MODEL) $(ARGS)
+else
+	python scripts/train.py $(ARGS)
+endif
 
 # Evaluate a pre-trained model, or train a new one with --train flag
-#	make evaluate MODEL=gat (default is gat)
-#	make evaluate MODEL=gat --train (to train a new model)
+#	make eval                     - eval default model (from configs)
+#	make eval MODEL=gat           - eval GAT model
+#	make eval MODEL=gat --train   - train then eval GAT model
+#	make eval ARGS="evaluator.params.k=20" - pass additional hydra overrides
 eval:
+ifdef MODEL
+	python scripts/evaluate.py model=$(MODEL) $(ARGS)
+else
 	python scripts/evaluate.py $(ARGS)
+endif
 
 # Hyperparameter tuning with Optuna sweeper
 #	make tune                                    - tune config with default sweeper
