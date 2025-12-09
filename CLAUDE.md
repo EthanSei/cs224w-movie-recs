@@ -171,3 +171,22 @@ PyTorch Geometric edge types MUST be tuples: `("user", "rates", "item")`. Hydra 
 ### Seed Management
 
 Training uses fixed seed (default 42) for reproducibility, set via `_set_seed()` in `scripts/train.py` which configures random, numpy, torch, and CUDA seeds.
+
+### Device Management (GPU Support)
+
+The project supports automatic GPU detection via the `device` parameter in trainer and evaluator configs:
+
+- **`auto`** (default): Automatically detects and uses CUDA (NVIDIA GPU), MPS (Apple Silicon), or falls back to CPU
+- **`cuda`**: Force CUDA GPU (use on Google Colab T4, etc.)
+- **`cpu`**: Force CPU execution
+- **`cuda:N`**: Use specific CUDA device N
+
+The device utility is in `src/recommender/utils/device.py`. Both `SimpleTrainer` and `Evaluator` use this to handle device placement.
+
+**Override device at runtime**:
+```bash
+python scripts/train.py trainer.params.device=cuda  # Force CUDA
+python scripts/evaluate.py evaluator.params.device=cuda trainer.params.device=cuda
+```
+
+On Google Colab with T4, the auto-detection will automatically select CUDA.

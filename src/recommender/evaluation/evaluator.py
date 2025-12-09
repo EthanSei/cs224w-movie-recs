@@ -2,14 +2,15 @@ import torch
 import numpy as np
 from collections import defaultdict
 import logging
+from recommender.utils.device import get_device
 
 logger = logging.getLogger(__name__)
 
 
 class Evaluator:
-    def __init__(self, k=10, device="cpu"):
+    def __init__(self, k=10, device="auto"):
         self.k = k
-        self.device = device
+        self.device = get_device(device)
 
     def evaluate(self, model, data, train_data=None, val_data=None):
         model.eval()
