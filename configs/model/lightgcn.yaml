@@ -1,0 +1,11 @@
+# LightGCN Model Configuration
+# LightGCN Simplification for user-item recommendation
+
+name: LightGCN
+module: "recommender.models.lightgcn:LightGCN"
+params:
+  in_dims: null # Overridden by data
+  metadata: null # Overridden by data
+  hidden_dim: 256
+  num_layers: 2
+  dropout: 0.0

@@ -1,4 +1,4 @@
-.PHONY: setup load reload train test venv
+.PHONY: setup load force_load train eval tune setup_test test
 
 env ?= dev
 VENV = CS224W-PROJECT
@@ -19,8 +19,23 @@ load:
 force_load:
 	python scripts/load_data.py --env $(env) --force
 
+# Modify model for training by setting MODEL variable, 
+#	make train MODEL=lightgcn (default is gat)
 train:
 	python scripts/train.py
+
+# Evaluate a pre-trained model, or train a new one with --train flag
+#	make evaluate MODEL=gat (default is gat)
+#	make evaluate MODEL=gat --train (to train a new model)
+eval:
+	python scripts/evaluate.py $(ARGS)
+
+# Hyperparameter tuning with Optuna sweeper
+#	make tune                                    - tune config with default sweeper
+#	make tune ARGS="model=gat +sweeper=gat"      - tune GAT with GAT-specific sweeper
+#	make tune ARGS="+sweeper=default hydra.sweeper.n_trials=10" - quick tune with 10 trials
+tune:
+	python scripts/tune.py +sweeper=default $(ARGS) --multirun
 
 setup_test:
 	pip install --upgrade pip

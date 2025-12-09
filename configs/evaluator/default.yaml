@@ -1,0 +1,5 @@
+name: default
+module: recommender.evaluation.evaluator:Evaluator
+params:
+  k: 10
+  device: cpu
