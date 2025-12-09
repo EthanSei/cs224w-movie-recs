@@ -1,0 +1,8 @@
+name: low_memory
+module: recommender.evaluation.evaluator:Evaluator
+params:
+  k: 10
+  device: auto
+  batch_size: 32  # very small user batch for memory-constrained GPUs (T4, L4)
+  item_batch_size: 256  # smaller item batches for tight memory
+

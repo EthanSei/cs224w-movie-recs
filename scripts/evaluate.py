@@ -8,6 +8,7 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 from torch_geometric.data import HeteroData
 from recommender.utils.module_loader import load_module
+from recommender.utils.device import clear_memory
 
 logging.basicConfig(
     level=logging.INFO,
@@ -141,6 +142,10 @@ def _train_new_model(cfg: DictConfig, train_data: HeteroData, val_data: HeteroDa
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     torch.save(trained_model.state_dict(), save_path)
     logger.info(f"Saved model to {save_path}")
+    
+    # Clean up trainer to free memory before evaluation
+    del trainer, loss_fn
+    clear_memory()
     
     return trained_model
 

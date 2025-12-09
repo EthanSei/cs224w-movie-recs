@@ -30,7 +30,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch_geometric.data import HeteroData
 
 from recommender.utils.module_loader import load_module
-from recommender.utils.device import get_device
+from recommender.utils.device import get_device, clear_memory
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,20 +80,30 @@ def tune(cfg: DictConfig) -> float:
     TrainerClass = load_module(cfg.trainer.module)
     trainer = TrainerClass(**cfg.trainer.params)
     
-    # Train model
-    trained_model = trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=False)
-    
-    # Evaluate on validation set for hyperparameter selection
-    EvaluatorClass = load_module(cfg.evaluator.module)
-    evaluator = EvaluatorClass(**cfg.evaluator.params)
-    
-    # Use validation data for tuning (test data reserved for final evaluation)
-    hr, ndcg, recall = evaluator.evaluate(trained_model, val_data, train_data=train_data)
-    
-    logger.info(f"Trial results - Hit@{evaluator.k}: {hr:.4f}, NDCG@{evaluator.k}: {ndcg:.4f}, Recall@{evaluator.k}: {recall:.4f}")
-    
-    # Return Recall as the optimization metric (Optuna will maximize this)
-    return recall
+    try:
+        # Train model
+        trained_model = trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=False)
+        
+        # Evaluate on validation set for hyperparameter selection
+        EvaluatorClass = load_module(cfg.evaluator.module)
+        evaluator = EvaluatorClass(**cfg.evaluator.params)
+        
+        # Use validation data for tuning (test data reserved for final evaluation)
+        hr, ndcg, recall = evaluator.evaluate(trained_model, val_data, train_data=train_data)
+        
+        logger.info(f"Trial results - Hit@{evaluator.k}: {hr:.4f}, NDCG@{evaluator.k}: {ndcg:.4f}, Recall@{evaluator.k}: {recall:.4f}")
+        
+        # Return Recall as the optimization metric (Optuna will maximize this)
+        return recall
+    finally:
+        # Clean up GPU memory between trials to prevent OOM
+        del model, trainer
+        if 'trained_model' in locals():
+            del trained_model
+        if 'evaluator' in locals():
+            del evaluator
+        clear_memory()
+        logger.info("Cleared GPU memory after trial")
 
 
 def _set_seed(seed: int = 42):

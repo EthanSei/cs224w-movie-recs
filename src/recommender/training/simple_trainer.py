@@ -2,7 +2,7 @@ import logging
 import tqdm
 import torch
 import torch_geometric.data as HeteroData
-from recommender.utils.device import get_device
+from recommender.utils.device import get_device, clear_memory
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -136,6 +136,9 @@ class SimpleTrainer:
         # Load best model
         if best_model_state is not None:
             model.load_state_dict(best_model_state)
+        
+        # Clear memory after training (free up GPU for evaluation)
+        clear_memory()
 
         if verbose:
             logger.info(f"Training completed. Best validation loss: {best_loss:.4f}")
