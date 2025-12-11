@@ -132,17 +132,22 @@ class TogetherAIClient:
     
     def _get_system_prompt(self) -> str:
         """System prompt for the reranker."""
-        return """You are a movie recommendation expert. Your task is to rerank movie 
-recommendations based on a user's viewing history and preferences.
+        return """You are a movie recommendation expert helping to refine recommendations from a Graph Neural Network (GNN) model.
 
-You will receive:
-1. A list of candidate movies with their metadata (title, genres, year, GNN score)
-2. The user's liked movies (rated >= 4 stars)
-3. The user's disliked movies (rated <= 2 stars)
+IMPORTANT CONTEXT:
+- The GNN model has learned from millions of user-movie interactions using collaborative filtering
+- GNN scores and ranks capture patterns like "users who liked X also liked Y"
+- Higher GNN scores indicate stronger collaborative filtering signals
+- The GNN's top-ranked movies are already strong candidates
 
-Analyze the user's preferences and rerank the candidates to best match their taste.
-Consider genre preferences, time periods, and patterns in their ratings.
-Provide brief reasoning for each recommendation, ordered by rank (1 = best match)."""
+YOUR ROLE:
+You should make TARGETED ADJUSTMENTS to the GNN ranking, not completely reorder it.
+- PROMOTE movies that strongly match the user's genre/era preferences AND have decent GNN scores
+- DEMOTE movies that clash with user preferences (wrong genres, disliked themes)
+- TRUST the GNN ranking for movies where you have no strong signal either way
+- Keep most top GNN-ranked movies in your top selections unless there's a clear mismatch
+
+Think of yourself as a refinement layer, not a replacement for the GNN."""
 
 
 
@@ -154,35 +159,43 @@ Provide brief reasoning for each recommendation, ordered by rank (1 = best match
     ) -> str:
         """Build the user prompt with candidates and context."""
 
-        # Prepare movie candidates.
-        candidates_text = "## Candidate Movies to Rerank:\n\n"
+        # Prepare movie candidates with GNN rank prominently displayed
+        candidates_text = "## Candidate Movies (ordered by GNN collaborative filtering rank):\n\n"
         for c in candidates:
             genres_str = ", ".join(c.genres) if c.genres else "Unknown"
             year_str = str(c.year) if c.year else "Unknown"
             candidates_text += (
-                f"- **ID {c.movie_id}**: {c.title}\n"
+                f"**GNN Rank #{c.gnn_rank}** - ID {c.movie_id}: {c.title}\n"
                 f"  Genres: {genres_str} | Year: {year_str} | GNN Score: {c.gnn_score:.3f}\n\n"
             )
         
         # Format user context
-        user_text = f"## User #{user_context.user_id} Preferences:\n\n"
+        user_text = f"## User #{user_context.user_id} Viewing History:\n\n"
         
         if user_context.liked_movies:
-            user_text += "**Liked Movies (>= 4 stars):**\n"
+            user_text += "**Movies they loved (4-5 stars):**\n"
             for movie in user_context.liked_movies:
                 user_text += f"- {movie}\n"
             user_text += "\n"
         else:
-            user_text += "**Liked Movies:** No high ratings available\n\n"
-        print(user_text)
+            user_text += "**Liked Movies:** Limited rating history available\n\n"
         
         if user_context.disliked_movies:
-            user_text += "**Disliked Movies (<= 2 stars):**\n"
+            user_text += "**Movies they disliked (1-2 stars):**\n"
             for movie in user_context.disliked_movies[:10]:
                 user_text += f"- {movie}\n"
             user_text += "\n"
         
-        instruction = f"\n## Task:\nRerank these candidates and return the top {top_k} movies that best match this user's preferences. Respond with JSON only."
+        instruction = f"""## Task:
+Select the top {top_k} movies for this user from the candidates above.
+
+GUIDELINES:
+- The GNN's top-ranked movies (ranks 1-10) are strong candidates backed by collaborative filtering
+- Promote lower-ranked movies ONLY if they strongly match user's demonstrated preferences
+- Demote top-ranked movies ONLY if they clearly clash with user's tastes
+- When uncertain, trust the GNN ranking
+
+Return your top {top_k} selections as JSON with movie_id, rank (1-{top_k}), and brief reasoning."""
         
         return candidates_text + user_text + instruction
 
