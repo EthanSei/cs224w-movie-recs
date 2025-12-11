@@ -18,12 +18,14 @@ class SimpleTrainer:
         self, 
         num_epochs: int,
         learning_rate: float = 1e-3,
+        weight_decay: float = 1e-5,
         device: str = "auto",
         patience: int = None,
         val_frequency: int = 1,
     ):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
         self.device = get_device(device)
         self.patience = patience
         self.val_frequency = max(1, val_frequency)
@@ -46,7 +48,7 @@ class SimpleTrainer:
         model.to(device)
 
         if optimizer is None:
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate, weight_decay=1e-4)
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         if loss_fn is None:
             from recommender.losses.bpr import BPRLoss
             loss_fn = BPRLoss(reduction="mean")

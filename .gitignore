@@ -1,8 +1,6 @@
 # Custom files
 multirun/
-runs/2025-11-26/
-runs/2025-12-08/
-runs/2025-12-10/
+runs/
 data/
 experiments/
 notebooks/
