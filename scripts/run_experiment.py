@@ -13,7 +13,7 @@ Usage:
 import argparse
 import json
 import logging
-import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -83,7 +83,7 @@ def rerank_with_llm(
     
     try:
         response = client.rerank(movie_candidates, context, top_k=k)
-        print(response)
+        logger.debug(f"Reranking response for user {user_id}: {response}")
         # Sort by rank and return movie IDs
         sorted_recs = sorted(response.recommendations, key=lambda x: x.rank)
         return [r.movie_id for r in sorted_recs[:k]]
@@ -97,7 +97,8 @@ def evaluate_model(
     predictions_path: Path,
     client: Optional[TogetherAIClient] = None,
     skip_rerank: bool = False,
-    k: int = 10
+    k: int = 10,
+    max_workers: int = 10
 ) -> Dict[str, float]:
     """Evaluate a single model's predictions."""
     with open(predictions_path, 'r') as f:
@@ -108,37 +109,51 @@ def evaluate_model(
     
     logger.info(f"Evaluating {model_name} on {len(users)} users...")
     
-    gnn_recalls = []
-    reranked_recalls = []
-    
-    for i, user_data in enumerate(users):
+    # Compute GNN recalls (fast, no parallelization needed)
+    gnn_recalls = {}
+    for user_data in users:
         user_id = user_data['user_id']
         ground_truth = user_data['ground_truth_items']
         candidates = user_data['top_50_candidates']
-        user_context = user_data['user_context']
-        
-        # GNN-only recall
         gnn_top_k = get_gnn_top_k(candidates, k)
-        gnn_recall = compute_recall_at_k(gnn_top_k, ground_truth, k)
-        gnn_recalls.append(gnn_recall)
+        gnn_recalls[user_id] = compute_recall_at_k(gnn_top_k, ground_truth, k)
+    
+    # LLM reranking in parallel
+    reranked_recalls = {}
+    if not skip_rerank and client is not None:
+        logger.info(f"  Reranking {len(users)} users with {max_workers} parallel workers...")
         
-        # LLM-reranked recall (if enabled)
-        if not skip_rerank and client is not None:
-            if (i + 1) % 10 == 0:
-                logger.info(f"  Reranking user {i + 1}/{len(users)}...")
+        def rerank_user(user_data):
+            """Process a single user for reranking."""
+            user_id = user_data['user_id']
+            ground_truth = user_data['ground_truth_items']
+            candidates = user_data['top_50_candidates']
+            user_context = user_data['user_context']
             
-            reranked_top_k = rerank_with_llm(
-                candidates, user_context, user_id, client, k
-            )
-            reranked_recall = compute_recall_at_k(reranked_top_k, ground_truth, k)
-            reranked_recalls.append(reranked_recall)
+            reranked_top_k = rerank_with_llm(candidates, user_context, user_id, client, k)
+            return user_id, compute_recall_at_k(reranked_top_k, ground_truth, k)
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(rerank_user, ud): ud['user_id'] for ud in users}
+            completed = 0
+            for future in as_completed(futures):
+                completed += 1
+                if completed % 10 == 0:
+                    logger.info(f"  Completed {completed}/{len(users)} users...")
+                try:
+                    user_id, recall = future.result()
+                    reranked_recalls[user_id] = recall
+                except Exception as e:
+                    user_id = futures[future]
+                    logger.error(f"  Failed for user {user_id}: {e}")
+                    reranked_recalls[user_id] = gnn_recalls[user_id]  # Fallback to GNN
     
     results = {
-        f"gnn_recall@{k}": sum(gnn_recalls) / len(gnn_recalls) if gnn_recalls else 0.0
+        f"gnn_recall@{k}": sum(gnn_recalls.values()) / len(gnn_recalls) if gnn_recalls else 0.0
     }
     
     if reranked_recalls:
-        results[f"reranked_recall@{k}"] = sum(reranked_recalls) / len(reranked_recalls)
+        results[f"reranked_recall@{k}"] = sum(reranked_recalls.values()) / len(reranked_recalls)
     
     return results
 
@@ -168,6 +183,12 @@ def main():
         default='experiments/results.json',
         help='Output path for results JSON'
     )
+    parser.add_argument(
+        '--workers',
+        type=int,
+        default=10,
+        help='Number of parallel workers for LLM reranking (default: 10)'
+    )
     
     args = parser.parse_args()
     
@@ -177,6 +198,7 @@ def main():
     logger.info(f"Models: {args.models}")
     logger.info(f"Recall@{args.k}")
     logger.info(f"Skip reranking: {args.skip_rerank}")
+    logger.info(f"Parallel workers: {args.workers}")
     logger.info("="*60)
     
     # Initialize LLM client if needed
@@ -213,7 +235,8 @@ def main():
             predictions_path,
             client=client,
             skip_rerank=args.skip_rerank,
-            k=args.k
+            k=args.k,
+            max_workers=args.workers
         )
         
         all_results[model_name] = results
