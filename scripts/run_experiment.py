@@ -49,6 +49,7 @@ def compute_recall_at_k(
 def get_gnn_top_k(candidates: List[dict], k: int = 10) -> List[int]:
     """Get top-k movie IDs from GNN candidates (already ranked by gnn_rank)."""
     # Sort by gnn_rank just to be safe
+
     sorted_candidates = sorted(candidates, key=lambda x: x['gnn_rank'])
     return [c['movie_id'] for c in sorted_candidates[:k]]
 
@@ -82,6 +83,7 @@ def rerank_with_llm(
     
     try:
         response = client.rerank(movie_candidates, context, top_k=k)
+        print(response)
         # Sort by rank and return movie IDs
         sorted_recs = sorted(response.recommendations, key=lambda x: x.rank)
         return [r.movie_id for r in sorted_recs[:k]]

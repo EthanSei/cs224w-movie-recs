@@ -386,9 +386,12 @@ def generate_predictions(cfg: DictConfig):
                     user_id, train_items, ratings_df, movies_df, user_code_to_id, movie_id_index
                 )
                 
+                # Convert test_items (graph indices) to movie IDs for consistency
+                ground_truth_movie_ids = [movie_id_index[idx] for idx in test_items if idx < len(movie_id_index)]
+                
                 users_data.append({
                     "user_id": user_id,
-                    "ground_truth_items": list(test_items),
+                    "ground_truth_items": ground_truth_movie_ids,
                     "top_50_candidates": candidates,
                     "user_context": user_context
                 })
