@@ -5,6 +5,6 @@ name: TwoTower
 module: recommender.models.two_tower:TwoTower
 params:
   in_dims: null  # Will be set from data dimensions in train.py
-  hidden_dim: 128
+  hidden_dim: 256
   num_layers: 2
   dropout: 0.01

@@ -1,0 +1,8 @@
+# MovieLens Latest (32M ratings, 280,000+ users, 58,000+ movies)
+# Large production dataset - slow training, use for final experiments
+name: movielens
+module: recommender.data.movielens:MovielensDataLoader
+params:
+  env: 32m
+options:
+  force: false

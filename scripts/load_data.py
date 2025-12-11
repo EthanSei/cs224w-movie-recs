@@ -7,7 +7,7 @@ import torch_geometric.data as HeteroData
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Force download the dataset")
-    parser.add_argument("--env", type=str, choices=["dev", "prod"], default="dev")
+    parser.add_argument("--env", type=str, choices=["dev", "1m", "prod", "32m", "small"], default="dev")
     args = parser.parse_args()
 
     data_loader = MovielensDataLoader(args.env)

@@ -8,18 +8,22 @@ logger = logging.getLogger(__name__)
 
 
 class Evaluator:
-    def __init__(self, k=10, device="auto", batch_size=128, item_batch_size=512):
+    def __init__(self, k=10, device="auto", batch_size=128, item_batch_size=512, max_test_users=None, test_user_seed=42):
         """
         Args:
             k: Number of top items to consider for Hit@k, NDCG@k, Recall@k
             device: Device to use for computation
             batch_size: Number of users to process at once (reduce if OOM)
             item_batch_size: Number of items to score at once per user batch (reduce if OOM)
+            max_test_users: If set, limit evaluation to this many test users (sampled with seed)
+            test_user_seed: Random seed for sampling test users (for consistency across runs)
         """
         self.k = k
         self.device = get_device(device)
         self.batch_size = batch_size
         self.item_batch_size = item_batch_size
+        self.max_test_users = max_test_users
+        self.test_user_seed = test_user_seed
 
     def evaluate(self, model, data, train_data=None, val_data=None):
         """
@@ -79,9 +83,15 @@ class Evaluator:
                 user_to_val_items[u.item()].add(i.item())
 
         hits, ndcgs, recalls = [], [], []
-        
+
         # Get list of test users to process
         test_users = list(user_to_test_items.keys())
+
+        # Optionally limit to max_test_users for faster evaluation
+        if self.max_test_users is not None and len(test_users) > self.max_test_users:
+            rng = np.random.RandomState(self.test_user_seed)
+            test_users = sorted(rng.choice(test_users, size=self.max_test_users, replace=False))
+            logger.info(f"Limiting evaluation to {self.max_test_users} users (seed={self.test_user_seed})")
         
         # Process users in batches for memory efficiency
         with torch.no_grad():

@@ -1,0 +1,8 @@
+# MovieLens 1M (1 million ratings, 6,040 users, 3,706 movies)
+# Medium-sized dataset - good balance between size and training time
+name: movielens
+module: recommender.data.movielens:MovielensDataLoader
+params:
+  env: 1m
+options:
+  force: false

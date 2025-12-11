@@ -1,3 +1,4 @@
+
 """Generate top-50 predictions for 100 sampled users across all models.
 
 This script loads pre-trained models and generates prediction JSON files
@@ -418,4 +419,3 @@ def generate_predictions(cfg: DictConfig):
 
 if __name__ == "__main__":
     generate_predictions()
-

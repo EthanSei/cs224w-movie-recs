@@ -1,6 +1,8 @@
 # Custom files
 multirun/
 runs/
+data/
+experiments/
 notebooks/
 .cursor/
 .specify/

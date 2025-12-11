@@ -1,0 +1,8 @@
+# MovieLens Small (100k ratings, 610 users, 9,742 movies)
+# Fast for development and testing
+name: movielens
+module: recommender.data.movielens:MovielensDataLoader
+params:
+  env: small
+options:
+  force: false

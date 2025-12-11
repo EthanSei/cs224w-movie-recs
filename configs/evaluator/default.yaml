@@ -5,3 +5,5 @@ params:
   device: auto  # auto-detects GPU (CUDA/MPS) or falls back to CPU
   batch_size: 128  # number of users to process at once (reduce if OOM)
   item_batch_size: 512  # number of items to score at once (reduce if OOM)
+  max_test_users: null  # limit to N test users (null = use all)
+  test_user_seed: 42  # random seed for sampling test users
