@@ -60,3 +60,13 @@ make eval MODEL=two_tower DATA=movielens_1m ARGS="+evaluator.params.max_test_use
 # some code
 ```
 
+```bash
+make train MODEL=lightgcn DATA=movielens_1m && \
+make eval MODEL=lightgcn DATA=movielens_1m && \
+make train MODEL=gat DATA=movielens_1m && \
+make eval MODEL=gat DATA=movielens_1m && \
+make train MODEL=hgt DATA=movielens_1m && \
+make eval MODEL=hgt DATA=movielens_1m && \
+make train MODEL=two_tower DATA=movielens_1m && \
+make eval MODEL=two_tower DATA=movielens_1m
+```

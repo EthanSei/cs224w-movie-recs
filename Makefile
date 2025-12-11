@@ -92,23 +92,20 @@ recs:
 #	make tune MODEL=hgt           - tune HGT model with HGT-specific sweeper
 #	make tune ARGS="hydra.sweeper.n_trials=10" - quick tune with 10 trials
 
+TUNE_CMD = python scripts/tune.py
 ifdef MODEL
-TUNE_CMD = python scripts/tune.py model=$(MODEL) +sweeper=$(MODEL)
+TUNE_CMD += model=$(MODEL) +sweeper=$(MODEL)
 else
-TUNE_CMD = python scripts/tune.py +sweeper=default
+TUNE_CMD += +sweeper=default
+endif
+ifdef DATA
+TUNE_CMD += data=$(DATA)
 endif
 
-# Hyperparameter tuning with Optuna sweeper
-#	make tune                     - tune default model with default sweeper
-#	make tune MODEL=gat           - tune GAT model with GAT-specific sweeper
-#	make tune MODEL=hgt           - tune HGT model with HGT-specific sweeper
-#	make tune ARGS="hydra.sweeper.n_trials=10" - quick tune with 10 trials
 tune:
-ifdef MODEL
-	python scripts/tune.py model=$(MODEL) +sweeper=$(MODEL) $(ARGS) --multirun
-else
-	python scripts/tune.py +sweeper=default $(ARGS) --multirun
-endif
+	$(TUNE_CMD) $(ARGS) --multirun
+
+# Test
 
 setup_test:
 	pip install --upgrade pip

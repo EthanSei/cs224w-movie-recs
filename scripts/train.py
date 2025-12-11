@@ -21,7 +21,18 @@ def run_training(cfg: DictConfig):
     _set_seed(seed)
 
     logger.info("Starting training on dataset: %s, model: %s, loss: %s, trainer: %s", cfg.data.name, cfg.model.name, cfg.loss.name, cfg.trainer.name)
-    
+
+    # Print model configuration for verification
+    logger.info("=" * 60)
+    logger.info("MODEL CONFIGURATION:")
+    logger.info(f"  Model: {cfg.model.name}")
+    if 'learning_rate' in cfg.model:
+        logger.info(f"  Learning Rate (from model config): {cfg.model.learning_rate}")
+    if 'weight_decay' in cfg.model:
+        logger.info(f"  Weight Decay (from model config):  {cfg.model.weight_decay}")
+    logger.info(f"  Model Params: {OmegaConf.to_yaml(cfg.model.params)}")
+    logger.info("=" * 60)
+
     # Load data
     DataLoaderClass = load_module(cfg.data.module)
     data_loader = DataLoaderClass(**cfg.data.params)
@@ -37,9 +48,14 @@ def run_training(cfg: DictConfig):
     LossClass = load_module(cfg.loss.module)
     loss_fn = LossClass(**cfg.loss.params)
 
-    # Load trainer
+    # Load trainer - inject weight_decay and learning_rate from model config if available
     TrainerClass = load_module(cfg.trainer.module)
-    trainer = TrainerClass(**cfg.trainer.params)
+    trainer_params = OmegaConf.to_container(cfg.trainer.params, resolve=True)
+    if 'weight_decay' in cfg.model:
+        trainer_params['weight_decay'] = cfg.model.weight_decay
+    if 'learning_rate' in cfg.model:
+        trainer_params['learning_rate'] = cfg.model.learning_rate
+    trainer = TrainerClass(**trainer_params)
 
     # Train
     trained_model = trainer.fit(model, train_data, val_data, loss_fn=loss_fn, verbose=True)

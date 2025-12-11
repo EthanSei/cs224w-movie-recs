@@ -1,8 +1,11 @@
 # LightGCN Model Configuration
 # LightGCN Simplification for user-item recommendation
+# Best hyperparameters from 100K tuning
 
 name: LightGCN
 module: "recommender.models.lightgcn:LightGCN"
+weight_decay: 1e-5
+learning_rate: 0.00446
 params:
   in_dims: null # Overridden by data
   metadata: null # Overridden by data

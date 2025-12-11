@@ -54,6 +54,17 @@ class SimpleTrainer:
             loss_fn = BPRLoss(reduction="mean")
             logger.info("Using BPR loss with mean reduction (default for recommendation models)")
 
+        # Print all hyperparameters for verification
+        logger.info("=" * 60)
+        logger.info("TRAINING HYPERPARAMETERS:")
+        logger.info(f"  Learning Rate:    {self.learning_rate}")
+        logger.info(f"  Weight Decay:     {self.weight_decay}")
+        logger.info(f"  Num Epochs:       {self.num_epochs}")
+        logger.info(f"  Patience:         {self.patience}")
+        logger.info(f"  Val Frequency:    {self.val_frequency}")
+        logger.info(f"  Device:           {device}")
+        logger.info("=" * 60)
+
         # Prepare graph data - expect features to exist in data.x
         train_x_dict = {node_type: train_data[node_type].x.to(device) for node_type in train_data.node_types}
         train_edge_index_dict = {edge_type: train_data[edge_type].edge_index.to(device) for edge_type in train_data.edge_types}

@@ -1,13 +1,16 @@
 # GAT Model Configuration
 # Graph Attention Network for user-item recommendation
+# Best hyperparameters from 100K tuning
 
 name: GAT
 module: "recommender.models.gat:GAT"
+weight_decay: 1e-5
+learning_rate: 0.002
 params:
   in_dims: null # Overridden by data
   metadata: null # Overridden by data
-  hidden_dim: 256
-  num_heads: 2
+  hidden_dim: 128
+  num_heads: 8
   num_layers: 2
-  dropout: 0.01
+  dropout: 0.2
 

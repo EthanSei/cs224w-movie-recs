@@ -1,10 +1,13 @@
 # Two-tower Model Configuration
 # Two-tower model for user-item recommendation
+# Best hyperparameters from 100K tuning
 
 name: TwoTower
 module: recommender.models.two_tower:TwoTower
+weight_decay: 1e-4
+learning_rate: 0.009
 params:
   in_dims: null  # Will be set from data dimensions in train.py
   hidden_dim: 256
-  num_layers: 2
-  dropout: 0.01
+  num_layers: 1
+  dropout: 0.1

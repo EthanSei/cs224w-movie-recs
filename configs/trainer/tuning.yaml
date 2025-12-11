@@ -4,10 +4,10 @@
 name: tuning
 module: recommender.training.simple_trainer:SimpleTrainer
 params:
-  num_epochs: 100
+  num_epochs: 50
   learning_rate: 0.001
   weight_decay: 1e-5  # regularization (tune per model)
-  patience: 20
+  patience: 10
   val_frequency: 5
   device: auto
 

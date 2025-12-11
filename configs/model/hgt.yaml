@@ -1,13 +1,16 @@
 # HGT Model Configuration
 # Heterogeneous Graph Transformer for user-item recommendation
+# Best hyperparameters from 100K tuning
 
 name: HGT
 module: recommender.models.hgt:HGT
 _partial_: true
+weight_decay: 1e-5
+learning_rate: 0.007
 params:
   in_dims: null # Overridden by data
   metadata: null # Overridden by data
-  hidden_dim: 256
-  heads: 2
+  hidden_dim: 128
+  heads: 4
   layers: 2
-  dropout: 0.01
+  dropout: 0.4
