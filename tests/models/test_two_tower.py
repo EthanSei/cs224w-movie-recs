@@ -63,7 +63,7 @@ def test_two_tower_forward_interface(tiny_hetero_graph):
     assert torch.allclose(z_dict["item"], z_dict2["item"], atol=1e-6)
 
 def test_two_tower_score_method(tiny_hetero_graph):
-    """Test TwoTower score() method uses WeightedDotProductHead"""
+    """Test TwoTower score() method uses DotProductHead"""
     g = tiny_hetero_graph
     model = TwoTower(in_dims=get_in_dims(g), hidden_dim=64, num_layers=2, dropout=0.1)
     model.eval()
@@ -81,6 +81,6 @@ def test_two_tower_score_method(tiny_hetero_graph):
     assert scores.shape == (batch_size,)
     assert torch.isfinite(scores).all()
     
-    # Verify it's using weighted dot product (not just dot product)
+    # Verify it's using simple dot product
     simple_dot = (user_batch * item_batch).sum(dim=1)
-    assert not torch.allclose(scores, simple_dot, atol=1e-4)
+    assert torch.allclose(scores, simple_dot, atol=1e-4)

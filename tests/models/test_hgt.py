@@ -38,7 +38,7 @@ def test_encode_missing_node_features(tiny_hetero_graph):
         pytest.skip(f"Model requires item features: {e}")
 
 def test_hgt_score_method(tiny_hetero_graph):
-    """Test HGT score() method uses WeightedDotProductHead"""
+    """Test HGT score() method uses DotProductHead"""
     g = tiny_hetero_graph
     model = HGT(get_in_dims(g), g.metadata(), hidden_dim=64, heads=2, layers=2)
     model.eval()
@@ -55,5 +55,6 @@ def test_hgt_score_method(tiny_hetero_graph):
     assert scores.shape == (batch_size,)
     assert torch.isfinite(scores).all()
     
+    # Verify it's using simple dot product
     simple_dot = (user_batch * item_batch).sum(dim=1)
-    assert not torch.allclose(scores, simple_dot, atol=1e-4)
+    assert torch.allclose(scores, simple_dot, atol=1e-4)

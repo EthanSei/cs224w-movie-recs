@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from recommender.models.model_helpers import WeightedDotProductHead
+from recommender.models.model_helpers import DotProductHead
 
 class TwoTower(nn.Module):
     """
@@ -20,8 +20,8 @@ class TwoTower(nn.Module):
         super(TwoTower, self).__init__()
         self.user_tower = self._build_tower(in_dims['user'], hidden_dim, num_layers, dropout)
         self.item_tower = self._build_tower(in_dims['item'], hidden_dim, num_layers, dropout)
-        # Weighted dot product head for scoring
-        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
+        # Dot product head for scoring
+        self.head = DotProductHead()
     
     def _build_tower(self, input_dim, hidden_dim, num_layers, dropout):
         """Build a tower network with variable number of layers."""
@@ -77,5 +77,5 @@ class TwoTower(nn.Module):
         user_emb: torch.Tensor,
         item_emb: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute scores using the weighted dot product head."""
+        """Compute scores using dot product."""
         return self.head(user_emb, item_emb)

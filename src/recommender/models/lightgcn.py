@@ -8,7 +8,7 @@ Based on: "LightGCN: Simplifying and Powering Graph Convolution Network for Reco
 import torch
 import torch.nn as nn
 from torch_geometric.nn import LGConv
-from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
+from recommender.models.model_helpers import TypeProjector, DotProductHead
 
 
 class LightGCN(nn.Module):
@@ -42,7 +42,7 @@ class LightGCN(nn.Module):
         
         self.convs = nn.ModuleList([LGConv() for _ in range(num_layers)])
         
-        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
+        self.head = DotProductHead()
         self.dropout_layer = nn.Dropout(dropout)
 
         self.reset_parameters()
@@ -67,7 +67,7 @@ class LightGCN(nn.Module):
         user_emb: torch.Tensor,
         item_emb: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute scores using the weighted dot product head."""
+        """Compute scores using dot product."""
         return self.head(user_emb, item_emb)
 
     def encode(

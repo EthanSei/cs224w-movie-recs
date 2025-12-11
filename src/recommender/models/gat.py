@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv, HeteroConv
-from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
+from recommender.models.model_helpers import TypeProjector, DotProductHead
 
 
 class GAT(nn.Module):
@@ -74,7 +74,7 @@ class GAT(nn.Module):
             hetero_conv = HeteroConv(conv_dict, aggr='sum')
             self.convs.append(hetero_conv)
         
-        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
+        self.head = DotProductHead()
         self.dropout_layer = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         self.reset_parameters()
@@ -98,7 +98,7 @@ class GAT(nn.Module):
         user_emb: torch.Tensor,
         item_emb: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute scores using the weighted dot product head."""
+        """Compute scores using dot product."""
         return self.head(user_emb, item_emb)
 
     def encode(

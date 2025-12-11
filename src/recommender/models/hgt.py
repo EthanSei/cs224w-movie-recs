@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import HGTConv
-from recommender.models.model_helpers import TypeProjector, WeightedDotProductHead
+from recommender.models.model_helpers import TypeProjector, DotProductHead
 
 """
 Heterogeneous Graph Transformer (HGT) model.
@@ -33,8 +33,8 @@ class HGT(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         
-        # Weighted dot product head for scoring
-        self.head = WeightedDotProductHead(hidden_dim, hidden_dim)
+        # Dot product head for scoring
+        self.head = DotProductHead()
         
         self.reset_parameters()
 
@@ -51,7 +51,7 @@ class HGT(nn.Module):
         user_emb: torch.Tensor,
         item_emb: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute scores using the weighted dot product head."""
+        """Compute scores using dot product."""
         return self.head(user_emb, item_emb)
 
     def encode(self, x_dict: dict[str, torch.Tensor], edge_index_dict: dict[tuple[str, str, str], torch.Tensor]) -> dict[str, torch.Tensor]:

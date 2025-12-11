@@ -115,7 +115,7 @@ def test_lightgcn_reset_parameters(tiny_hetero_graph):
     assert out2['item'].shape == out1['item'].shape
 
 def test_lightgcn_score_method(tiny_hetero_graph):
-    """Test LightGCN score() method uses WeightedDotProductHead"""
+    """Test LightGCN score() method uses DotProductHead"""
     g = tiny_hetero_graph
     model = LightGCN(in_dims=get_in_dims(g), metadata=g.metadata(), hidden_dim=64, num_layers=2, dropout=0.1)
     model.eval()
@@ -132,8 +132,9 @@ def test_lightgcn_score_method(tiny_hetero_graph):
     assert scores.shape == (batch_size,)
     assert torch.isfinite(scores).all()
     
+    # Verify it's using simple dot product
     simple_dot = (user_batch * item_batch).sum(dim=1)
-    assert not torch.allclose(scores, simple_dot, atol=1e-4)
+    assert torch.allclose(scores, simple_dot, atol=1e-4)
 
 def test_lightgcn_layer_averaging(tiny_hetero_graph):
     """Test that LightGCN averages embeddings across all layers (key LightGCN feature)"""
