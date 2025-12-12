@@ -8,6 +8,7 @@ Usage:
     python scripts/run_experiment.py
     python scripts/run_experiment.py --models gat hgt  # Specific models only
     python scripts/run_experiment.py --skip-rerank  # Skip LLM reranking (GNN only)
+    python scripts/run_experiment.py --max-users 100  # Test on first 100 users only
 """
 
 import argparse
@@ -19,6 +20,8 @@ from typing import Dict, List, Optional
 
 from recommender.reranker.ai_client import TogetherAIClient
 from recommender.reranker.schemas import MovieCandidate, UserContext
+
+import time
 
 logging.basicConfig(
     level=logging.INFO,
@@ -98,17 +101,23 @@ def evaluate_model(
     client: Optional[TogetherAIClient] = None,
     skip_rerank: bool = False,
     k: int = 10,
-    max_workers: int = 10
+    max_workers: int = 10,
+    max_users: Optional[int] = None
 ) -> Dict[str, float]:
     """Evaluate a single model's predictions."""
     with open(predictions_path, 'r') as f:
         data = json.load(f)
-    
+
     model_name = data['model']
     users = data['users']
-    
+
+    # Limit to first max_users if specified (maintains consistency across runs)
+    if max_users is not None and len(users) > max_users:
+        users = users[:max_users]
+        logger.info(f"Limiting evaluation to first {max_users} users (out of {len(data['users'])} total)")
+
     logger.info(f"Evaluating {model_name} on {len(users)} users...")
-    
+
     # Compute GNN recalls (fast, no parallelization needed)
     gnn_recalls = {}
     for user_data in users:
@@ -189,7 +198,13 @@ def main():
         default=10,
         help='Number of parallel workers for LLM reranking (default: 10)'
     )
-    
+    parser.add_argument(
+        '--max-users',
+        type=int,
+        default=None,
+        help='Limit evaluation to first N users (for testing, maintains consistency)'
+    )
+
     args = parser.parse_args()
     
     logger.info("="*60)
@@ -199,6 +214,8 @@ def main():
     logger.info(f"Recall@{args.k}")
     logger.info(f"Skip reranking: {args.skip_rerank}")
     logger.info(f"Parallel workers: {args.workers}")
+    if args.max_users:
+        logger.info(f"Max users: {args.max_users}")
     logger.info("="*60)
     
     # Initialize LLM client if needed
@@ -236,7 +253,8 @@ def main():
             client=client,
             skip_rerank=args.skip_rerank,
             k=args.k,
-            max_workers=args.workers
+            max_workers=args.workers,
+            max_users=args.max_users
         )
         
         all_results[model_name] = results
@@ -246,9 +264,13 @@ def main():
             logger.info(f"  {metric}: {value:.4f}")
     
     # Build final output
+    # Determine actual number of users evaluated
+    actual_num_users = args.max_users if args.max_users and args.max_users < num_users else num_users
+
     output = {
         "seed": seed,
-        "num_users": num_users,
+        "num_users_total": num_users,
+        "num_users_evaluated": actual_num_users,
         "k": args.k,
         "skip_rerank": args.skip_rerank,
         "results": all_results
@@ -267,6 +289,8 @@ def main():
     logger.info("\n" + "="*60)
     logger.info("SUMMARY")
     logger.info("="*60)
+    logger.info(f"Evaluated on {actual_num_users} users (seed={seed})")
+    logger.info("-"*60)
     logger.info(f"{'Model':<15} {'GNN Recall@' + str(args.k):<20} {'Reranked Recall@' + str(args.k):<20}")
     logger.info("-"*60)
     
@@ -283,5 +307,8 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    logger.info(f"Total execution time: {end_time - start_time:.2f} seconds")
 

@@ -92,6 +92,10 @@ class Evaluator:
             rng = np.random.RandomState(self.test_user_seed)
             test_users = sorted(rng.choice(test_users, size=self.max_test_users, replace=False))
             logger.info(f"Limiting evaluation to {self.max_test_users} users (seed={self.test_user_seed})")
+
+        # Log actual number of users being evaluated
+        logger.info(f"Evaluating on {len(test_users)} test users (max_test_users={self.max_test_users})")
+        logger.info(f"First 10 test user IDs: {test_users[:10]}")
         
         # Process users in batches for memory efficiency
         with torch.no_grad():

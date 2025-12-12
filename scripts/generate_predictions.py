@@ -1,5 +1,5 @@
 
-"""Generate top-50 predictions for 100 sampled users across all models.
+"""Generate top-50 predictions for 500 sampled users across all models.
 
 This script loads pre-trained models and generates prediction JSON files
 for use in the experiment pipeline comparing GNN-only vs LLM-reranked recall.
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Models to evaluate
 MODELS = ["gat", "hgt", "lightgcn", "two_tower"]
-NUM_USERS = 100
+NUM_USERS = 500
 TOP_K = 50
 
 
@@ -339,15 +339,17 @@ def generate_predictions(cfg: DictConfig):
         train_data, val_data, test_data
     )
     
-    # Sample 100 users from test set
+    # Sample users from test set (using numpy RNG for consistency with evaluator)
     test_users = list(user_to_test_items.keys())
     if len(test_users) < NUM_USERS:
         logger.warning(f"Only {len(test_users)} users in test set, using all of them")
         sampled_users = test_users
     else:
-        sampled_users = random.sample(test_users, NUM_USERS)
-    
-    logger.info(f"Sampled {len(sampled_users)} users from test set")
+        rng = np.random.RandomState(seed)
+        sampled_users = sorted(rng.choice(test_users, size=NUM_USERS, replace=False).tolist())
+
+    logger.info(f"Sampled {len(sampled_users)} users from test set (seed={seed})")
+    logger.info(f"First 10 sampled user IDs: {sampled_users[:10]}")
     
     # Create experiments directory
     experiments_dir = Path("experiments")

@@ -62,11 +62,41 @@ make eval MODEL=two_tower DATA=movielens_1m ARGS="+evaluator.params.max_test_use
 
 ```bash
 make train MODEL=lightgcn DATA=movielens_1m && \
-make eval MODEL=lightgcn DATA=movielens_1m && \
+make eval MODEL=lightgcn DATA=movielens_1m ARGS="evaluator.params.max_test_users=100" && \
 make train MODEL=gat DATA=movielens_1m && \
-make eval MODEL=gat DATA=movielens_1m && \
+make eval MODEL=gat DATA=movielens_1m ARGS="evaluator.params.max_test_users=100" && \
 make train MODEL=hgt DATA=movielens_1m && \
-make eval MODEL=hgt DATA=movielens_1m && \
+make eval MODEL=hgt DATA=movielens_1m ARGS="evaluator.params.max_test_users=100" && \
 make train MODEL=two_tower DATA=movielens_1m && \
-make eval MODEL=two_tower DATA=movielens_1m
+make eval MODEL=two_tower DATA=movielens_1m ARGS="evaluator.params.max_test_users=100"
+```
+
+```bash
+make train MODEL=lightgcn && \
+make eval MODEL=lightgcn ARGS="evaluator.params.max_test_users=100" && \
+make train MODEL=gat && \
+make eval MODEL=gat ARGS="evaluator.params.max_test_users=100" && \
+make train MODEL=hgt && \
+make eval MODEL=hgt ARGS="evaluator.params.max_test_users=100" && \
+make train MODEL=two_tower && \
+make eval MODEL=two_tower ARGS="evaluator.params.max_test_users=100"
+```
+
+
+# Eval Only
+```bash
+make eval MODEL=lightgcn DATA=movielens_1m ARGS="evaluator.params.max_test_users=500 evaluator.params.test_user_seed=42" && \
+make eval MODEL=gat DATA=movielens_1m ARGS="evaluator.params.max_test_users=500 evaluator.params.test_user_seed=42" && \
+make eval MODEL=hgt DATA=movielens_1m ARGS="evaluator.params.max_test_users=500 evaluator.params.test_user_seed=42" && \
+make eval MODEL=two_tower DATA=movielens_1m ARGS="evaluator.params.max_test_users=500 evaluator.params.test_user_seed=42"
+```
+
+# Prediction Generation (JSON)
+```bash
+python scripts/generate_predictions.py data=movielens_1m +seed=42
+```
+
+# Test Example Script for Run Experiment
+```bash
+python scripts/run_experiment.py --models lightgcn --max-users 100
 ```

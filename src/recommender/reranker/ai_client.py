@@ -46,7 +46,23 @@ class TogetherAIClient:
     """Client for Together AI's official SDK."""
     
     # Note: Llama-3.2-3B doesn't support json_schema mode, use 3.1-8B
-    DEFAULT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+    # DEFAULT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+    # DEFAULT_MODEL = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+    # DEFAULT_MODEL = "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
+    # DEFAULT_MODEL = "Qwen/Qwen2.5-72B-Instruct-Turbo"
+    # DEFAULT_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    # DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct-Turbo"
+
+
+    # DEFAULT_MODEL = "meta-llama/Meta-Llama-3.3-70B-Instruct-Turbo"  # unavailable
+    # DEFAULT_MODEL = "Salesforce/Llama-Rank-v1" # does not support json_schema
+    # DEFAULT_MODEL = "mixedbread-ai/Mxbai-Rerank-Large-V2" # does not support json_schema
+
+    # THREE TO ACTUALLY TEST FOR FULL RUNS
+    # DEFAULT_MODEL = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+    # DEFAULT_MODEL = "Qwen/Qwen2.5-72B-Instruct-Turbo"
+    # DEFAULT_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    DEFAULT_MODEL = "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
     
     def __init__(
         self,
@@ -190,12 +206,23 @@ Think of yourself as a refinement layer, not a replacement for the GNN."""
 Select the top {top_k} movies for this user from the candidates above.
 
 GUIDELINES:
-- The GNN's top-ranked movies (ranks 1-10) are strong candidates backed by collaborative filtering
-- Promote lower-ranked movies ONLY if they strongly match user's demonstrated preferences
-- Demote top-ranked movies ONLY if they clearly clash with user's tastes
-- When uncertain, trust the GNN ranking
+- The GNN's top-10 movies are VERY STRONG candidates backed by collaborative filtering
+- Make SMALL adjustments (±3-5 positions) based on clear genre/era mismatches
+- ONLY promote lower-ranked movies if they STRONGLY match AND have decent GNN scores (>15th percentile)
+- ONLY demote top-ranked movies if they CLEARLY clash (wrong genre + user dislikes similar movies)
+- When uncertain, TRUST THE GNN RANKING - it knows patterns you don't see
+- Aim for subtle refinement, not complete reordering
 
 Return your top {top_k} selections as JSON with movie_id, rank (1-{top_k}), and brief reasoning."""
         
         return candidates_text + user_text + instruction
 
+
+
+# GUIDELINES:
+# - The GNN's top-10 movies are VERY STRONG candidates backed by collaborative filtering
+# - Make SMALL adjustments (±3-5 positions) based on clear genre/era mismatches
+# - ONLY promote lower-ranked movies if they STRONGLY match AND have decent GNN scores (>15th percentile)
+# - ONLY demote top-ranked movies if they CLEARLY clash (wrong genre + user dislikes similar movies)
+# - When uncertain, TRUST THE GNN RANKING - it knows patterns you don't see
+# - Aim for subtle refinement, not complete reordering
