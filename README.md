@@ -30,7 +30,9 @@ make recs MODEL=gat
 
 ## LLM Reranking Experiment
 
-Generate predictions and compare GNN-only vs LLM-reranked recall:
+Generate predictions and compare GNN-only vs LLM-reranked recall. You need a Together AI API Key:
+1. Get an API key from [together.ai](https://api.together.ai/)
+2. Add to `.env` in project root: `TOGETHER_API_KEY=your-key-here`
 
 ```bash
 # Generate top-50 predictions for all models
