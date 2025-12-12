@@ -44,7 +44,8 @@ python scripts/run_experiment.py --skip-rerank  # GNN only, no LLM
 ## Testing
 
 ```bash
-make test
+make setup_test # Install test dependencies
+make test # Run tests in tests/ directory
 ```
 
 ## Configuration
